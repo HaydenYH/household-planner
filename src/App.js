@@ -14,12 +14,12 @@
 //   updated_at timestamptz default now()
 // );
 // alter table household_data enable row level security;
-// create policy “Public read” on household_data for select using (true);
-// create policy “Public write” on household_data for insert with check (true);
-// create policy “Public update” on household_data for update using (true);
+// create policy "Public read" on household_data for select using (true);
+// create policy "Public write" on household_data for insert with check (true);
+// create policy "Public update" on household_data for update using (true);
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useRef, useCallback } from “react”;
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -35,26 +35,26 @@ return rows?.[0]?.value ?? null;
 },
 async set(key, value) {
 await fetch(`${SUPABASE_URL}/rest/v1/household_data`, {
-method: “POST”,
+method: "POST",
 headers: {
 apikey: SUPABASE_ANON_KEY,
 Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-“Content-Type”: “application/json”,
-Prefer: “resolution=merge-duplicates”,
+"Content-Type": "application/json",
+Prefer: "resolution=merge-duplicates",
 },
 body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
 });
 },
 subscribe(key, callback) {
-const wsUrl = SUPABASE_URL.replace(“https”, “wss”).replace(“http”, “ws”);
+const wsUrl = SUPABASE_URL.replace("https", "wss").replace("http", "ws");
 const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_ANON_KEY}&vsn=1.0.0`);
 ws.onopen = () => {
-ws.send(JSON.stringify({ topic: “realtime:public:household_data”, event: “phx_join”, payload: { config: { broadcast: { self: false }, presence: { key: “” }, postgres_changes: [{ event: “UPDATE”, schema: “public”, table: “household_data”, filter: `key=eq.${key}` }, { event: “INSERT”, schema: “public”, table: “household_data”, filter: `key=eq.${key}` }] } }, ref: “1” }));
+ws.send(JSON.stringify({ topic: "realtime:public:household_data", event: "phx_join", payload: { config: { broadcast: { self: false }, presence: { key: "" }, postgres_changes: [{ event: "UPDATE", schema: "public", table: "household_data", filter: `key=eq.${key}` }, { event: "INSERT", schema: "public", table: "household_data", filter: `key=eq.${key}` }] } }, ref: "1" }));
 };
 ws.onmessage = (msg) => {
 try {
 const data = JSON.parse(msg.data);
-if (data.event === “postgres_changes” && data.payload?.data?.record) {
+if (data.event === "postgres_changes" && data.payload?.data?.record) {
 callback(data.payload.data.record.value);
 }
 } catch (_) {}
@@ -64,66 +64,66 @@ return () => ws.close();
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const MEMBERS = [“Hayden”, “Eilish”, “Tyran”];
-const MEMBER_INITIALS = { Hayden: “H”, Eilish: “E”, Tyran: “T” };
-const MEMBER_COLORS = { Hayden: “#c8a96e”, Eilish: “#a78bca”, Tyran: “#5c9fe0” };
-const MEAL_TYPES = [“Breakfast”, “Lunch”, “Dinner”];
-const DAYS = [“Mon”, “Tue”, “Wed”, “Thu”, “Fri”, “Sat”, “Sun”];
-const FULL_DAYS = [“Monday”, “Tuesday”, “Wednesday”, “Thursday”, “Friday”, “Saturday”, “Sunday”];
-const STORES = [“Woolworths”, “Aldi”, “Costco”, “Market”];
+const MEMBERS = ["Hayden", "Eilish", "Tyran"];
+const MEMBER_INITIALS = { Hayden: "H", Eilish: "E", Tyran: "T" };
+const MEMBER_COLORS = { Hayden: "#c8a96e", Eilish: "#a78bca", Tyran: "#5c9fe0" };
+const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner"];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const FULL_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const STORES = ["Woolworths", "Aldi", "Costco", "Market"];
 const MAX_GOALS = 5;
 
 const STORE_COLORS = {
-Woolworths: { bg: “#1a4a1a”, accent: “#4caf50”, light: “#4caf5022” },
-Aldi:       { bg: “#1a1a3a”, accent: “#5c7cfa”, light: “#5c7cfa22” },
-Costco:     { bg: “#3a1a1a”, accent: “#f44336”, light: “#f4433622” },
-Market:     { bg: “#2a1f0a”, accent: “#ff9800”, light: “#ff980022” },
+Woolworths: { bg: "#1a4a1a", accent: "#4caf50", light: "#4caf5022" },
+Aldi:       { bg: "#1a1a3a", accent: "#5c7cfa", light: "#5c7cfa22" },
+Costco:     { bg: "#3a1a1a", accent: "#f44336", light: "#f4433622" },
+Market:     { bg: "#2a1f0a", accent: "#ff9800", light: "#ff980022" },
 };
 
-const MEAL_ICONS = { Breakfast: “☀️”, Lunch: “🌤”, Dinner: “🌙” };
+const MEAL_ICONS = { Breakfast: "☀️", Lunch: "🌤", Dinner: "🌙" };
 
 const DEFAULT_RECIPES = [
-{ id: 1, name: “Spaghetti Bolognese”, type: “Dinner”, ingredients: [
-{ name: “Spaghetti”, qty: “400g”, store: “Woolworths” },
-{ name: “Beef mince”, qty: “500g”, store: “Woolworths” },
-{ name: “Crushed tomatoes”, qty: “2 cans”, store: “Aldi” },
-{ name: “Onion”, qty: “1”, store: “Market” },
-{ name: “Garlic”, qty: “4 cloves”, store: “Market” },
-{ name: “Olive oil”, qty: “2 tbsp”, store: “Aldi” },
+{ id: 1, name: "Spaghetti Bolognese", type: "Dinner", ingredients: [
+{ name: "Spaghetti", qty: "400g", store: "Woolworths" },
+{ name: "Beef mince", qty: "500g", store: "Woolworths" },
+{ name: "Crushed tomatoes", qty: "2 cans", store: "Aldi" },
+{ name: "Onion", qty: "1", store: "Market" },
+{ name: "Garlic", qty: "4 cloves", store: "Market" },
+{ name: "Olive oil", qty: "2 tbsp", store: "Aldi" },
 ]},
-{ id: 2, name: “Chicken Stir Fry”, type: “Dinner”, ingredients: [
-{ name: “Chicken breast”, qty: “600g”, store: “Woolworths” },
-{ name: “Mixed vegetables”, qty: “400g”, store: “Market” },
-{ name: “Soy sauce”, qty: “3 tbsp”, store: “Woolworths” },
-{ name: “Jasmine rice”, qty: “2 cups”, store: “Costco” },
-{ name: “Sesame oil”, qty: “1 tbsp”, store: “Woolworths” },
+{ id: 2, name: "Chicken Stir Fry", type: "Dinner", ingredients: [
+{ name: "Chicken breast", qty: "600g", store: "Woolworths" },
+{ name: "Mixed vegetables", qty: "400g", store: "Market" },
+{ name: "Soy sauce", qty: "3 tbsp", store: "Woolworths" },
+{ name: "Jasmine rice", qty: "2 cups", store: "Costco" },
+{ name: "Sesame oil", qty: "1 tbsp", store: "Woolworths" },
 ]},
-{ id: 3, name: “Avocado Toast”, type: “Breakfast”, ingredients: [
-{ name: “Sourdough bread”, qty: “4 slices”, store: “Market” },
-{ name: “Avocados”, qty: “2”, store: “Market” },
-{ name: “Eggs”, qty: “4”, store: “Aldi” },
-{ name: “Feta cheese”, qty: “100g”, store: “Woolworths” },
+{ id: 3, name: "Avocado Toast", type: "Breakfast", ingredients: [
+{ name: "Sourdough bread", qty: "4 slices", store: "Market" },
+{ name: "Avocados", qty: "2", store: "Market" },
+{ name: "Eggs", qty: "4", store: "Aldi" },
+{ name: "Feta cheese", qty: "100g", store: "Woolworths" },
 ]},
-{ id: 4, name: “Porridge”, type: “Breakfast”, ingredients: [
-{ name: “Rolled oats”, qty: “2 cups”, store: “Aldi” },
-{ name: “Milk”, qty: “500ml”, store: “Aldi” },
-{ name: “Honey”, qty: “2 tbsp”, store: “Woolworths” },
-{ name: “Banana”, qty: “2”, store: “Market” },
+{ id: 4, name: "Porridge", type: "Breakfast", ingredients: [
+{ name: "Rolled oats", qty: "2 cups", store: "Aldi" },
+{ name: "Milk", qty: "500ml", store: "Aldi" },
+{ name: "Honey", qty: "2 tbsp", store: "Woolworths" },
+{ name: "Banana", qty: "2", store: "Market" },
 ]},
-{ id: 5, name: “Chicken Rice Bowls”, type: “Lunch”, ingredients: [
-{ name: “Chicken breast”, qty: “500g”, store: “Costco” },
-{ name: “Brown rice”, qty: “2 cups”, store: “Aldi” },
-{ name: “Baby spinach”, qty: “100g”, store: “Woolworths” },
-{ name: “Sweet potato”, qty: “1 large”, store: “Market” },
-{ name: “Olive oil”, qty: “2 tbsp”, store: “Aldi” },
+{ id: 5, name: "Chicken Rice Bowls", type: "Lunch", ingredients: [
+{ name: "Chicken breast", qty: "500g", store: "Costco" },
+{ name: "Brown rice", qty: "2 cups", store: "Aldi" },
+{ name: "Baby spinach", qty: "100g", store: "Woolworths" },
+{ name: "Sweet potato", qty: "1 large", store: "Market" },
+{ name: "Olive oil", qty: "2 tbsp", store: "Aldi" },
 ]},
-{ id: 6, name: “Beef Tacos”, type: “Dinner”, ingredients: [
-{ name: “Beef mince”, qty: “500g”, store: “Woolworths” },
-{ name: “Taco shells”, qty: “12”, store: “Woolworths” },
-{ name: “Taco seasoning”, qty: “1 packet”, store: “Aldi” },
-{ name: “Shredded cheese”, qty: “1 cup”, store: “Costco” },
-{ name: “Sour cream”, qty: “200g”, store: “Woolworths” },
-{ name: “Lettuce”, qty: “1/2 head”, store: “Market” },
+{ id: 6, name: "Beef Tacos", type: "Dinner", ingredients: [
+{ name: "Beef mince", qty: "500g", store: "Woolworths" },
+{ name: "Taco shells", qty: "12", store: "Woolworths" },
+{ name: "Taco seasoning", qty: "1 packet", store: "Aldi" },
+{ name: "Shredded cheese", qty: "1 cup", store: "Costco" },
+{ name: "Sour cream", qty: "200g", store: "Woolworths" },
+{ name: "Lettuce", qty: "1/2 head", store: "Market" },
 ]},
 ];
 
@@ -171,7 +171,7 @@ return unsub;
 
 const setAndSave = useCallback((updater) => {
 setState(prev => {
-const next = typeof updater === “function” ? updater(prev) : updater;
+const next = typeof updater === "function" ? updater(prev) : updater;
 localRef.current = true;
 clearTimeout(saveTimer.current);
 saveTimer.current = setTimeout(() => {
@@ -199,44 +199,44 @@ setDraft(p => ({ ...p, ingredients: p.ingredients.filter((_, i) => i !== idx) })
 }
 
 return (
-<div className=“sheet” onClick={e => e.stopPropagation()} style={{ maxHeight: “92vh” }}>
-<div style={{ display: “flex”, justifyContent: “space-between”, alignItems: “center”, marginBottom: 18 }}>
+<div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "92vh" }}>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
 <h2 style={{ margin: 0, fontSize: 18 }}>{title}</h2>
-<button onClick={onClose} style={{ background: “#252320”, border: “none”, color: “#888”, borderRadius: 100, width: 28, height: 28, cursor: “pointer”, fontSize: 16 }}>×</button>
+<button onClick={onClose} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
 </div>
 <div style={{ marginBottom: 12 }}>
-<div className=“dm” style={{ fontSize: 10, color: “#555”, textTransform: “uppercase”, letterSpacing: “.1em”, marginBottom: 6 }}>Name</div>
-<input value={draft.name} onChange={e => setDraft(p => ({ ...p, name: e.target.value }))} placeholder=“e.g. Chicken Parmigiana” style={{ width: “100%” }} />
+<div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Name</div>
+<input value={draft.name} onChange={e => setDraft(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Chicken Parmigiana" style={{ width: "100%" }} />
 </div>
 <div style={{ marginBottom: 16 }}>
-<div className=“dm” style={{ fontSize: 10, color: “#555”, textTransform: “uppercase”, letterSpacing: “.1em”, marginBottom: 6 }}>Meal type</div>
-<div style={{ display: “flex”, gap: 8 }}>
+<div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Meal type</div>
+<div style={{ display: "flex", gap: 8 }}>
 {MEAL_TYPES.map(mt => (
-<button key={mt} className=“btn” onClick={() => setDraft(p => ({ ...p, type: mt }))}
-style={{ flex: 1, padding: “8px 4px”, background: draft.type === mt ? “#c8a96e” : “#1e1c18”, color: draft.type === mt ? “#0c0c0a” : “#666” }}>
+<button key={mt} className="btn" onClick={() => setDraft(p => ({ ...p, type: mt }))}
+style={{ flex: 1, padding: "8px 4px", background: draft.type === mt ? "#c8a96e" : "#1e1c18", color: draft.type === mt ? "#0c0c0a" : "#666" }}>
 {MEAL_ICONS[mt]} {mt}
 </button>
 ))}
 </div>
 </div>
-<div className=“dm” style={{ fontSize: 10, color: “#555”, textTransform: “uppercase”, letterSpacing: “.1em”, marginBottom: 8 }}>Ingredients</div>
+<div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Ingredients</div>
 {draft.ingredients.map((ing, idx) => (
-<div key={idx} style={{ display: “grid”, gridTemplateColumns: “1fr 60px 1fr 28px”, gap: 5, marginBottom: 7, alignItems: “center” }}>
-<input value={ing.name} onChange={e => updateIng(idx, “name”, e.target.value)} placeholder=“Ingredient” />
-<input value={ing.qty} onChange={e => updateIng(idx, “qty”, e.target.value)} placeholder=“Qty” />
-<select value={ing.store} onChange={e => updateIng(idx, “store”, e.target.value)} style={{ width: “100%” }}>
+<div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 60px 1fr 28px", gap: 5, marginBottom: 7, alignItems: "center" }}>
+<input value={ing.name} onChange={e => updateIng(idx, "name", e.target.value)} placeholder="Ingredient" />
+<input value={ing.qty} onChange={e => updateIng(idx, "qty", e.target.value)} placeholder="Qty" />
+<select value={ing.store} onChange={e => updateIng(idx, "store", e.target.value)} style={{ width: "100%" }}>
 {STORES.map(s => <option key={s} value={s}>{s}</option>)}
 </select>
 <button onClick={() => removeIng(idx)}
-style={{ background: “none”, border: “none”, color: “#555”, fontSize: 18, cursor: “pointer”, padding: 0, lineHeight: 1, textAlign: “center” }}>×</button>
+style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1, textAlign: "center" }}>×</button>
 </div>
 ))}
-<button className=“btn” onClick={() => setDraft(p => ({ ...p, ingredients: [...p.ingredients, { name: “”, qty: “”, store: “Woolworths” }] }))}
-style={{ background: “#1e1c18”, color: “#888”, padding: “8px 16px”, width: “100%”, marginBottom: 14 }}>
+<button className="btn" onClick={() => setDraft(p => ({ ...p, ingredients: [...p.ingredients, { name: "", qty: "", store: "Woolworths" }] }))}
+style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 14 }}>
 + Add ingredient
 </button>
-<button className=“btn” onClick={() => valid && onSave(draft)}
-style={{ background: valid ? “#c8a96e” : “#2a2824”, color: valid ? “#0c0c0a” : “#555”, padding: “13px 20px”, width: “100%”, cursor: valid ? “pointer” : “default” }}>
+<button className="btn" onClick={() => valid && onSave(draft)}
+style={{ background: valid ? "#c8a96e" : "#2a2824", color: valid ? "#0c0c0a" : "#555", padding: "13px 20px", width: "100%", cursor: valid ? "pointer" : "default" }}>
 Save Recipe
 </button>
 </div>
@@ -245,19 +245,19 @@ Save Recipe
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
-const [view, setView] = useState(“week”);
+const [view, setView] = useState("week");
 const [selectedDay, setSelectedDay] = useState(0);
 
-const [recipes, setRecipes, recipesReady] = useSharedState(“recipes”, DEFAULT_RECIPES);
-const [week, setWeek, weekReady] = useSharedState(“week”, buildEmptyWeek());
-const [shoppingList, setShoppingList, shopReady] = useSharedState(“shopping”, []);
-const [goals, setGoals, goalsReady] = useSharedState(“goals”, buildEmptyGoals());
+const [recipes, setRecipes, recipesReady] = useSharedState("recipes", DEFAULT_RECIPES);
+const [week, setWeek, weekReady] = useSharedState("week", buildEmptyWeek());
+const [shoppingList, setShoppingList, shopReady] = useSharedState("shopping", []);
+const [goals, setGoals, goalsReady] = useSharedState("goals", buildEmptyGoals());
 
 const [pickerFor, setPickerFor] = useState(null);
 const [showAddRecipe, setShowAddRecipe] = useState(false);
 const [editingRecipe, setEditingRecipe] = useState(null); // recipe object
 const [newGoalMember, setNewGoalMember] = useState(null); // member name
-const [newGoalText, setNewGoalText] = useState(””);
+const [newGoalText, setNewGoalText] = useState("");
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const weekStart = getWeekStart();
@@ -284,7 +284,7 @@ if (!mealId || attending.length === 0) return;
 const recipe = recipes.find(r => r.id === mealId);
 if (!recipe) return;
 recipe.ingredients.forEach(ing => {
-const store = ing.store || “Woolworths”;
+const store = ing.store || "Woolworths";
 if (!byStore[store]) byStore[store] = {};
 const k = ing.name.toLowerCase();
 if (!byStore[store][k]) byStore[store][k] = { id: `${k}-${store}`, name: ing.name, qty: ing.qty, store, checked: false };
@@ -292,7 +292,7 @@ if (!byStore[store][k]) byStore[store][k] = { id: `${k}-${store}`, name: ing.nam
 });
 });
 setShoppingList(Object.values(byStore).flatMap(items => Object.values(items)));
-setView(“shopping”);
+setView("shopping");
 }
 
 function toggleCheck(id) { setShoppingList(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i)); }
@@ -326,7 +326,7 @@ if (memberGoals.length >= MAX_GOALS) return;
 const checks = {};
 DAYS.forEach(d => { checks[d] = false; });
 setGoals(prev => ({ ...prev, [member]: [...(prev[member] || []), { id: Date.now(), text: newGoalText.trim(), checks }] }));
-setNewGoalText(””);
+setNewGoalText("");
 setNewGoalMember(null);
 }
 
@@ -342,11 +342,11 @@ setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId)
 }
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
-const notConfigured = SUPABASE_URL === “YOUR_SUPABASE_URL”;
+const notConfigured = SUPABASE_URL === "YOUR_SUPABASE_URL";
 
 // ── Render ─────────────────────────────────────────────────────────────────
 return (
-<div style={{ fontFamily: “‘Playfair Display’, Georgia, serif”, background: “#0c0c0a”, minHeight: “100vh”, color: “#ede8d8”, maxWidth: 480, margin: “0 auto”, paddingBottom: 84 }}>
+<div style={{ fontFamily: "‘Playfair Display’, Georgia, serif", background: "#0c0c0a", minHeight: "100vh", color: "#ede8d8", maxWidth: 480, margin: "0 auto", paddingBottom: 84 }}>
 <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap'); *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;} ::-webkit-scrollbar{display:none;} body{background:#0c0c0a;} .dm{font-family:'DM Sans',sans-serif;} .btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;border:none;border-radius:100px;cursor:pointer;transition:all .15s;} .card{background:#161512;border-radius:18px;border:1px solid #252320;transition:border-color .2s;} .card:hover{border-color:#353230;} .chip{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:4px 11px;border-radius:100px;cursor:pointer;transition:all .15s;border:1.5px solid transparent;} .chip.on{background:#c8a96e;color:#0c0c0a;border-color:#c8a96e;} .chip.off{background:transparent;color:#555;border-color:#2a2824;} .meal-pill{font-family:'DM Sans',sans-serif;font-size:12px;background:#1e1c18;color:#c8a96e;border:1px solid #c8a96e33;border-radius:100px;padding:4px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;} .nav-btn{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:100px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;} .nav-btn.active{background:#c8a96e1a;color:#c8a96e;} .nav-btn.inactive{color:#444;} .overlay{position:fixed;inset:0;background:#0c0c0aee;z-index:200;display:flex;align-items:flex-end;} .sheet{background:#161512;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px;border-top:1px solid #252320;} input,select{background:#0c0c0a;border:1.5px solid #252320;border-radius:10px;color:#ede8d8;padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;-webkit-appearance:none;} input:focus,select:focus{border-color:#c8a96e55;} select option{background:#161512;} .day-tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:100px;border:none;cursor:pointer;transition:all .15s;} .day-tab.active{background:#c8a96e;color:#0c0c0a;} .day-tab.inactive{background:#1a1814;color:#666;} .fadeIn{animation:fadeIn .2s ease;} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} .pulse{animation:pulse 1.5s infinite;} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}} .check-box{width:22px;height:22px;border-radius:7px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;} .goal-day-btn{font-family:'DM Sans',sans-serif;font-size:9px;font-weight:700;width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}`}</style>
 
 ```
