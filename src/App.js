@@ -261,7 +261,7 @@ Save Recipe
 );
 }
 
-// ── App ───────────────────────────────────────────────────────────────────────
+
 export default function App() {
 const [view, setView] = useState("week");
 const [selectedDay, setSelectedDay] = useState(0);
