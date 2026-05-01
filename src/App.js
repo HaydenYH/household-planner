@@ -127,7 +127,7 @@ const DEFAULT_RECIPES = [
 ]},
 ];
 
-// goals shape: { Hayden: [ { id, text, checks: { Mon: bool, … } } ], Eilish: […], Tyran: […] }
+// goals shape: { Hayden: [ { id, text, checks: { Mon: bool, ... } } ], Eilish: [...], Tyran: [...] }
 function buildEmptyGoals() {
 const g = {};
 MEMBERS.forEach(m => { g[m] = []; });
@@ -136,7 +136,7 @@ return g;
 
 function buildEmptyWeek() {
 const w = {};
-DAYS.forEach(d => { w[d] = {}; MEAL_TYPES.forEach(m => { w[d][m] = { attending: […MEMBERS], mealId: null }; }); });
+DAYS.forEach(d => { w[d] = {}; MEAL_TYPES.forEach(m => { w[d][m] = { attending: [...MEMBERS], mealId: null }; }); });
 return w;
 }
 
@@ -190,12 +190,12 @@ const [draft, setDraft] = useState(initial);
 const valid = draft.name.trim().length > 0;
 
 function updateIng(idx, field, val) {
-const a = […draft.ingredients];
-a[idx] = { …a[idx], [field]: val };
-setDraft(p => ({ …p, ingredients: a }));
+const a = [...draft.ingredients];
+a[idx] = { ...a[idx], [field]: val };
+setDraft(p => ({ ...p, ingredients: a }));
 }
 function removeIng(idx) {
-setDraft(p => ({ …p, ingredients: p.ingredients.filter((_, i) => i !== idx) }));
+setDraft(p => ({ ...p, ingredients: p.ingredients.filter((_, i) => i !== idx) }));
 }
 
 return (
@@ -206,13 +206,13 @@ return (
 </div>
 <div style={{ marginBottom: 12 }}>
 <div className=“dm” style={{ fontSize: 10, color: “#555”, textTransform: “uppercase”, letterSpacing: “.1em”, marginBottom: 6 }}>Name</div>
-<input value={draft.name} onChange={e => setDraft(p => ({ …p, name: e.target.value }))} placeholder=“e.g. Chicken Parmigiana” style={{ width: “100%” }} />
+<input value={draft.name} onChange={e => setDraft(p => ({ ...p, name: e.target.value }))} placeholder=“e.g. Chicken Parmigiana” style={{ width: “100%” }} />
 </div>
 <div style={{ marginBottom: 16 }}>
 <div className=“dm” style={{ fontSize: 10, color: “#555”, textTransform: “uppercase”, letterSpacing: “.1em”, marginBottom: 6 }}>Meal type</div>
 <div style={{ display: “flex”, gap: 8 }}>
 {MEAL_TYPES.map(mt => (
-<button key={mt} className=“btn” onClick={() => setDraft(p => ({ …p, type: mt }))}
+<button key={mt} className=“btn” onClick={() => setDraft(p => ({ ...p, type: mt }))}
 style={{ flex: 1, padding: “8px 4px”, background: draft.type === mt ? “#c8a96e” : “#1e1c18”, color: draft.type === mt ? “#0c0c0a” : “#666” }}>
 {MEAL_ICONS[mt]} {mt}
 </button>
@@ -231,7 +231,7 @@ style={{ flex: 1, padding: “8px 4px”, background: draft.type === mt ? “#c8
 style={{ background: “none”, border: “none”, color: “#555”, fontSize: 18, cursor: “pointer”, padding: 0, lineHeight: 1, textAlign: “center” }}>×</button>
 </div>
 ))}
-<button className=“btn” onClick={() => setDraft(p => ({ …p, ingredients: […p.ingredients, { name: “”, qty: “”, store: “Woolworths” }] }))}
+<button className=“btn” onClick={() => setDraft(p => ({ ...p, ingredients: [...p.ingredients, { name: “”, qty: “”, store: “Woolworths” }] }))}
 style={{ background: “#1e1c18”, color: “#888”, padding: “8px 16px”, width: “100%”, marginBottom: 14 }}>
 + Add ingredient
 </button>
@@ -266,12 +266,12 @@ const weekStart = getWeekStart();
 function toggleAttending(day, mealType, member) {
 setWeek(prev => {
 const cur = prev[day][mealType].attending;
-return { …prev, [day]: { …prev[day], [mealType]: { …prev[day][mealType], attending: cur.includes(member) ? cur.filter(m => m !== member) : […cur, member] } } };
+return { ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], attending: cur.includes(member) ? cur.filter(m => m !== member) : [...cur, member] } } };
 });
 }
 
 function setMeal(day, mealType, recipeId) {
-setWeek(prev => ({ …prev, [day]: { …prev[day], [mealType]: { …prev[day][mealType], mealId: recipeId } } }));
+setWeek(prev => ({ ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], mealId: recipeId } } }));
 setPickerFor(null);
 }
 
@@ -295,25 +295,25 @@ setShoppingList(Object.values(byStore).flatMap(items => Object.values(items)));
 setView(“shopping”);
 }
 
-function toggleCheck(id) { setShoppingList(prev => prev.map(i => i.id === id ? { …i, checked: !i.checked } : i)); }
+function toggleCheck(id) { setShoppingList(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i)); }
 function removeItem(id) { setShoppingList(prev => prev.filter(i => i.id !== id)); }
 
 // ── Recipe actions ────────────────────────────────────────────────────────
 function saveNewRecipe(draft) {
-setRecipes(prev => […prev, { …draft, id: Date.now(), ingredients: draft.ingredients.filter(i => i.name.trim()) }]);
+setRecipes(prev => [...prev, { ...draft, id: Date.now(), ingredients: draft.ingredients.filter(i => i.name.trim()) }]);
 setShowAddRecipe(false);
 }
 
 function saveEditedRecipe(draft) {
-setRecipes(prev => prev.map(r => r.id === draft.id ? { …draft, ingredients: draft.ingredients.filter(i => i.name.trim()) } : r));
+setRecipes(prev => prev.map(r => r.id === draft.id ? { ...draft, ingredients: draft.ingredients.filter(i => i.name.trim()) } : r));
 setEditingRecipe(null);
 }
 
 function deleteRecipe(id) {
 setRecipes(prev => prev.filter(r => r.id !== id));
 setWeek(prev => {
-const next = { …prev };
-DAYS.forEach(d => MEAL_TYPES.forEach(m => { if (next[d][m].mealId === id) next[d] = { …next[d], [m]: { …next[d][m], mealId: null } }; }));
+const next = { ...prev };
+DAYS.forEach(d => MEAL_TYPES.forEach(m => { if (next[d][m].mealId === id) next[d] = { ...next[d], [m]: { ...next[d][m], mealId: null } }; }));
 return next;
 });
 }
@@ -325,20 +325,20 @@ const memberGoals = goals[member] || [];
 if (memberGoals.length >= MAX_GOALS) return;
 const checks = {};
 DAYS.forEach(d => { checks[d] = false; });
-setGoals(prev => ({ …prev, [member]: […(prev[member] || []), { id: Date.now(), text: newGoalText.trim(), checks }] }));
+setGoals(prev => ({ ...prev, [member]: [...(prev[member] || []), { id: Date.now(), text: newGoalText.trim(), checks }] }));
 setNewGoalText(””);
 setNewGoalMember(null);
 }
 
 function toggleGoalDay(member, goalId, day) {
 setGoals(prev => ({
-…prev,
-[member]: prev[member].map(g => g.id === goalId ? { …g, checks: { …g.checks, [day]: !g.checks[day] } } : g),
+...prev,
+[member]: prev[member].map(g => g.id === goalId ? { ...g, checks: { ...g.checks, [day]: !g.checks[day] } } : g),
 }));
 }
 
 function deleteGoal(member, goalId) {
-setGoals(prev => ({ …prev, [member]: prev[member].filter(g => g.id !== goalId) }));
+setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId) }));
 }
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
@@ -364,7 +364,7 @@ return (
       <div>
         <div className="dm" style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#555", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}>
           {weekStart.toLocaleDateString("en-AU", { day: "numeric", month: "long" })} — Household
-          {!loaded && <span className="dm pulse" style={{ fontSize: 9, color: "#c8a96e" }}>syncing…</span>}
+          {!loaded && <span className="dm pulse" style={{ fontSize: 9, color: "#c8a96e" }}>syncing...</span>}
           {loaded && !notConfigured && <span className="dm" style={{ fontSize: 9, color: "#4caf50" }}>● live</span>}
         </div>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: "-.02em" }}>
@@ -688,7 +688,7 @@ return (
             <div key={r.id} onClick={() => setMeal(pickerFor.day, pickerFor.mealType, r.id)}
               style={{ padding: "13px 15px", borderRadius: 12, marginBottom: 7, cursor: "pointer", background: active ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${active ? "#c8a96e" : "#252320"}` }}>
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{r.name}</div>
-              <div className="dm" style={{ fontSize: 11, color: "#555" }}>{r.ingredients.slice(0, 3).map(i => i.name).join(", ")}{r.ingredients.length > 3 ? "…" : ""}</div>
+              <div className="dm" style={{ fontSize: 11, color: "#555" }}>{r.ingredients.slice(0, 3).map(i => i.name).join(", ")}{r.ingredients.length > 3 ? "..." : ""}</div>
             </div>
           );
         })}
@@ -739,7 +739,7 @@ return (
           value={newGoalText}
           onChange={e => setNewGoalText(e.target.value)}
           onKeyDown={e => e.key === "Enter" && addGoal(newGoalMember)}
-          placeholder="e.g. Go to the gym, Read 20 pages…"
+          placeholder="e.g. Go to the gym, Read 20 pages..."
           style={{ width: "100%", marginBottom: 14 }}
           autoFocus
         />
