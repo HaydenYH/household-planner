@@ -21,19 +21,27 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || "";
 
 // ── Supabase helpers ──────────────────────────────────────────────────────────
 const sb = {
 async get(key) {
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+try {
 const res = await fetch(`${SUPABASE_URL}/rest/v1/household_data?key=eq.${key}&select=value`, {
 headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
 });
 const rows = await res.json();
 return rows?.[0]?.value ?? null;
+} catch (err) {
+console.warn("Supabase fetch failed:", err);
+return null;
+}
 },
 async set(key, value) {
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+try {
 await fetch(`${SUPABASE_URL}/rest/v1/household_data`, {
 method: "POST",
 headers: {
@@ -44,8 +52,13 @@ Prefer: "resolution=merge-duplicates",
 },
 body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
 });
+} catch (err) {
+console.warn("Supabase set failed:", err);
+}
 },
 subscribe(key, callback) {
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return () => {};
+try {
 const wsUrl = SUPABASE_URL.replace("https", "wss").replace("http", "ws");
 const ws = new WebSocket(`${wsUrl}/realtime/v1/websocket?apikey=${SUPABASE_ANON_KEY}&vsn=1.0.0`);
 ws.onopen = () => {
@@ -59,7 +72,12 @@ callback(data.payload.data.record.value);
 }
 } catch (_) {}
 };
-return () => ws.close();
+ws.onerror = (err) => console.warn("WebSocket error:", err);
+return () => { try { ws.close(); } catch (_) {} };
+} catch (err) {
+console.warn("WebSocket subscription failed:", err);
+return () => {};
+}
 },
 };
 
@@ -342,11 +360,11 @@ setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId)
 }
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
-const notConfigured = SUPABASE_URL === "YOUR_SUPABASE_URL";
+const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 
 // ── Render ─────────────────────────────────────────────────────────────────
 return (
-<div style={{ fontFamily: "‘Playfair Display’, Georgia, serif", background: "#0c0c0a", minHeight: "100vh", color: "#ede8d8", maxWidth: 480, margin: "0 auto", paddingBottom: 84 }}>
+<div style={{ fontFamily: "'Playfair Display', Georgia, serif", background: "#0c0c0a", minHeight: "100vh", color: "#ede8d8", maxWidth: 480, margin: "0 auto", paddingBottom: 84 }}>
 <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap'); *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;} ::-webkit-scrollbar{display:none;} body{background:#0c0c0a;} .dm{font-family:'DM Sans',sans-serif;} .btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;border:none;border-radius:100px;cursor:pointer;transition:all .15s;} .card{background:#161512;border-radius:18px;border:1px solid #252320;transition:border-color .2s;} .card:hover{border-color:#353230;} .chip{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:4px 11px;border-radius:100px;cursor:pointer;transition:all .15s;border:1.5px solid transparent;} .chip.on{background:#c8a96e;color:#0c0c0a;border-color:#c8a96e;} .chip.off{background:transparent;color:#555;border-color:#2a2824;} .meal-pill{font-family:'DM Sans',sans-serif;font-size:12px;background:#1e1c18;color:#c8a96e;border:1px solid #c8a96e33;border-radius:100px;padding:4px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;} .nav-btn{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:100px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;} .nav-btn.active{background:#c8a96e1a;color:#c8a96e;} .nav-btn.inactive{color:#444;} .overlay{position:fixed;inset:0;background:#0c0c0aee;z-index:200;display:flex;align-items:flex-end;} .sheet{background:#161512;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px;border-top:1px solid #252320;} input,select{background:#0c0c0a;border:1.5px solid #252320;border-radius:10px;color:#ede8d8;padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;-webkit-appearance:none;} input:focus,select:focus{border-color:#c8a96e55;} select option{background:#161512;} .day-tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:100px;border:none;cursor:pointer;transition:all .15s;} .day-tab.active{background:#c8a96e;color:#0c0c0a;} .day-tab.inactive{background:#1a1814;color:#666;} .fadeIn{animation:fadeIn .2s ease;} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} .pulse{animation:pulse 1.5s infinite;} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}} .check-box{width:22px;height:22px;border-radius:7px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;} .goal-day-btn{font-family:'DM Sans',sans-serif;font-size:9px;font-weight:700;width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}`}</style>
 
 ```
