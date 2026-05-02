@@ -667,6 +667,12 @@ return (
             <button className="btn" onClick={() => changeWeek(-7)} style={{ padding: "8px 12px", background: "#1e1c18", color: "#c8a96e" }}>←</button>
             <span className="dm" style={{ fontSize: 12, color: "#aaa" }}>Week of {weekStart.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</span>
             <button className="btn" onClick={() => changeWeek(7)} style={{ padding: "8px 12px", background: "#1e1c18", color: "#c8a96e" }}>→</button>
+{weekStart.toISOString().slice(0,10) !== getWeekStart().toISOString().slice(0,10) && (
+  <button className="btn" onClick={() => { setWeekStart(getWeekStart()); setSelectedDay(0); }}
+    style={{ padding: "8px 14px", background: "#2a3a2a", color: "#4caf50", border: "1px solid #4caf5044" }}>
+    ⌂ Today
+  </button>
+)}
           </div>
         )}
       </div>
