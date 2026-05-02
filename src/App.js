@@ -508,7 +508,7 @@ setShowAddShoppingItem(false);
 setNewShoppingItem({ name: "", qty: "", unit: "", store: "Woolworths" });
 }
 
-function generateShoppingList() {
+function generateShoppingList(switchView = true) {
   const consolidated = {};
 
   DAYS.forEach(day => {
@@ -553,7 +553,7 @@ function generateShoppingList() {
 
   setShoppingList(Object.values(consolidated));
   setShoppingListSnapshot(JSON.stringify(week));
-  setView("shopping");
+  if (switchView) setView("shopping");
 }
 
 function processIngredientsForEdit(ingredients) {
@@ -609,6 +609,12 @@ setGoals(prev => ({
 function deleteGoal(member, goalId) {
 setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId) }));
 }
+
+useEffect(() => {
+  if (safeShoppingList.length > 0) {
+    generateShoppingList(false);
+  }
+}, [week]);
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
 const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
