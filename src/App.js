@@ -447,6 +447,7 @@ const [editingRecipe, setEditingRecipe] = useState(null); // recipe object
 const [showAddShoppingItem, setShowAddShoppingItem] = useState(false);
 const [newShoppingItem, setNewShoppingItem] = useState({ name: "", qty: "", unit: "", store: "Woolworths" });
 const [compactShopping, setCompactShopping] = useState(false);
+const [shoppingListSnapshot, setShoppingListSnapshot] = useState(null);
 const [newGoalMember, setNewGoalMember] = useState(null);
 const [newGoalText, setNewGoalText] = useState("");
 
@@ -551,6 +552,7 @@ function generateShoppingList() {
   });
 
   setShoppingList(Object.values(consolidated));
+  setShoppingListSnapshot(JSON.stringify(week));
   setView("shopping");
 }
 
@@ -837,6 +839,17 @@ return (
         )}
       </div>
     </div>
+
+{shoppingListSnapshot && JSON.stringify(week) !== shoppingListSnapshot && (
+  <div style={{ background: "#2a1a0a", border: "1px solid #c8a96e55", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+    <div className="dm" style={{ fontSize: 12, color: "#c8a96e", fontWeight: 700, marginBottom: 6 }}>⚠️ Meal plan has changed</div>
+    <div className="dm" style={{ fontSize: 11, color: "#888", marginBottom: 10 }}>Your shopping list may be out of date.</div>
+    <button className="btn" onClick={generateShoppingList} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "8px 16px" }}>
+      🔄 Regenerate list
+    </button>
+  </div>
+)}
+
     {shoppingWarnings.length > 0 && (
   <div style={{ background: "#2a1f0a", border: "1px solid #ff980055", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
     <div className="dm" style={{ fontSize: 12, color: "#ff9800", fontWeight: 700, marginBottom: 6 }}>⚠️ Possible duplicate ingredients</div>
