@@ -774,13 +774,28 @@ return (
                       <div style={{ flex: 1 }}>
                         <div className="dm" style={{ fontSize: 14, fontWeight: 500, textDecoration: item.checked ? "line-through" : "none" }}>{item.name}</div>
                         <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-                          <div className="dm" style={{ fontSize: 11, color: "#555" }}>{consolidateQuantities(item.quantities)}</div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#12100e", borderRadius: 12, padding: "6px 8px" }} onClick={e => e.stopPropagation()}>
+                          <div className="dm" style={{ fontSize: 11, color: "#888", fontWeight: 500, padding: "6px 0" }}>Need: <span style={{ color: "#c8a96e" }}>{consolidateQuantities(item.quantities)}</span></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#12100e", borderRadius: 12, padding: "6px 8px" }} onClick={e => e.stopPropagation()}>
                             <input type="number" min="0" value={item.pantryQty || ""} onChange={e => {
                               const value = e.target.value;
                               setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryQty: value === "" ? 0 : parseFloat(value) } : i) : []);
-                            }} placeholder="Pantry" style={{ width: 70, background: "transparent", border: "1px solid #333", color: "#fff", borderRadius: 8, padding: "4px 6px" }} />
-                            <span className="dm" style={{ fontSize: 11, color: "#aaa" }}>in pantry</span>
+                            }} placeholder="0" style={{ width: 50, background: "transparent", border: "1px solid #333", color: "#fff", borderRadius: 6, padding: "4px 6px" }} />
+                            <select value={item.pantryUnit || (item.quantities?.[0]?.unit || "")} onChange={e => {
+                              setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryUnit: e.target.value } : i) : []);
+                            }} style={{ background: "transparent", color: "#fff", border: "1px solid #333", borderRadius: 6, padding: "4px 6px", minWidth: 60, fontSize: 11 }}>
+                              <option value="">none</option>
+                              <option value="g">g</option>
+                              <option value="kg">kg</option>
+                              <option value="ml">ml</option>
+                              <option value="L">L</option>
+                              <option value="cups">cups</option>
+                              <option value="tbsp">tbsp</option>
+                              <option value="tsp">tsp</option>
+                              <option value="cans">cans</option>
+                              <option value="packets">packets</option>
+                              <option value="slices">slices</option>
+                            </select>
+                            <span className="dm" style={{ fontSize: 10, color: "#555", whiteSpace: "nowrap" }}>in pantry</span>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#12100e", borderRadius: 12, padding: "6px 8px" }} onClick={e => e.stopPropagation()}>
                             <select value={item.tempStore || item.store} onChange={e => {
@@ -789,21 +804,25 @@ return (
                                 if (i.id !== item.id) return i;
                                 return { ...i, tempStore: nextStore === i.store ? null : nextStore };
                               }) : []);
-                            }} style={{ background: "transparent", color: "#fff", border: "1px solid #333", borderRadius: 8, padding: "4px 6px", minWidth: 110 }}>
+                            }} style={{ background: "transparent", color: "#fff", border: "1px solid #333", borderRadius: 6, padding: "4px 6px", minWidth: 100, fontSize: 11 }}>
                               {STORES.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                           </div>
                         </div>
                         {(() => {
                           const totals = getQuantitySummary(item.quantities);
-                          if (totals.length === 1) {
-                            const total = totals[0];
-                            const pantry = parseFloat(item.pantryQty) || 0;
-                            const remaining = Math.max(total.qty - pantry, 0);
-                            const remainingDisplay = Number.isInteger(remaining) ? remaining : parseFloat(remaining.toFixed(2));
-                            return <div className="dm" style={{ fontSize: 11, color: "#8bc34a", marginTop: 4 }}>Need {remainingDisplay} {total.unit}</div>;
-                          }
-                          return null;
+                          const pantryQty = parseFloat(item.pantryQty) || 0;
+                          const pantryUnit = item.pantryUnit || (item.quantities?.[0]?.unit || "");
+                          const remaining = totals.map(t => {
+                            let leftover = t.qty;
+                            if (pantryUnit && pantryUnit === t.unit) {
+                              leftover = Math.max(t.qty - pantryQty, 0);
+                            }
+                            const display = Number.isInteger(leftover) ? leftover : parseFloat(leftover.toFixed(2));
+                            return { qty: display, unit: t.unit };
+                          });
+                          const remainingText = remaining.map(r => `${r.qty} ${r.unit}`).join(", ");
+                          return <div className="dm" style={{ fontSize: 11, color: "#8bc34a", marginTop: 4, fontWeight: 500 }}>🛒 {remainingText}</div>;
                         })()}
                       </div>
                       <button onClick={e => { e.stopPropagation(); removeItem(item.id); }}
