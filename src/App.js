@@ -147,71 +147,67 @@ function getQuantitySummary(quantities) {
   const incompatible = {};
   const list = Array.isArray(quantities) ? quantities : [];
   for (const { qty, unit } of list) {
-    if (unit in UNIT_CONVERSIONS) {
-      const base = unit === 'g' || unit === 'kg' ? 'g' : 'ml';
-      const converted = qty * (UNIT_CONVERSIONS[unit][base] || 1);
+    const numQty = parseFloat(qty);
+    if (isNaN(numQty) || numQty <= 0) continue;
+    const cleanUnit = unit || "";
+    if (cleanUnit in UNIT_CONVERSIONS) {
+      const base = cleanUnit === "g" || cleanUnit === "kg" ? "g" : "ml";
+      const converted = numQty * (UNIT_CONVERSIONS[cleanUnit][base] || 1);
       if (!compatible[base]) compatible[base] = 0;
       compatible[base] += converted;
     } else {
-      if (!incompatible[unit]) incompatible[unit] = 0;
-      incompatible[unit] += qty;
+      if (!incompatible[cleanUnit]) incompatible[cleanUnit] = 0;
+      incompatible[cleanUnit] += numQty;
     }
   }
   const totals = [];
   for (const [base, total] of Object.entries(compatible)) {
-    const displayUnit = total >= 1000 && base === 'g' ? 'kg' : total >= 1000 && base === 'ml' ? 'L' : base;
-    const displayQty = displayUnit === 'kg' ? total / 1000 : displayUnit === 'L' ? total / 1000 : total;
-    totals.push({ qty: displayQty, unit: displayUnit });
+    const displayUnit = total >= 1000 && base === "g" ? "kg" : total >= 1000 && base === "ml" ? "L" : base;
+    const displayQty = displayUnit === "kg" || displayUnit === "L" ? total / 1000 : total;
+    totals.push({ qty: parseFloat(displayQty.toFixed(2)), unit: displayUnit });
   }
   for (const [unit, qty] of Object.entries(incompatible)) {
-    totals.push({ qty, unit });
+    totals.push({ qty: parseFloat(qty.toFixed(2)), unit });
   }
   return totals;
 }
 
 const DEFAULT_RECIPES = [
-{ id: 1, name: "Spaghetti Bolognese", type: "Dinner", serves: 4, ingredients: [
-{ name: "Spaghetti", qty: 400, unit: "g", store: "Woolworths" },
-{ name: "Beef mince", qty: 500, unit: "g", store: "Woolworths" },
-{ name: "Crushed tomatoes", qty: 2, unit: "cans", store: "Aldi" },
-{ name: "Onion", qty: 1, unit: "", store: "Market" },
-{ name: "Garlic", qty: 4, unit: "cloves", store: "Market" },
-{ name: "Olive oil", qty: 2, unit: "tbsp", store: "Aldi" },
-]},
-{ id: 2, name: "Chicken Stir Fry", type: "Dinner", serves: 4, ingredients: [
-{ name: "Chicken breast", qty: 600, unit: "g", store: "Woolworths" },
-{ name: "Mixed vegetables", qty: 400, unit: "g", store: "Market" },
-{ name: "Soy sauce", qty: 3, unit: "tbsp", store: "Woolworths" },
-{ name: "Jasmine rice", qty: 2, unit: "cups", store: "Costco" },
-{ name: "Sesame oil", qty: 1, unit: "tbsp", store: "Woolworths" },
-]},
-{ id: 3, name: "Avocado Toast", type: "Breakfast", serves: 2, ingredients: [
-{ name: "Sourdough bread", qty: 4, unit: "slices", store: "Market" },
-{ name: "Avocados", qty: 2, unit: "", store: "Market" },
-{ name: "Eggs", qty: 4, unit: "", store: "Aldi" },
-{ name: "Feta cheese", qty: 100, unit: "g", store: "Woolworths" },
-]},
-{ id: 4, name: "Porridge", type: "Breakfast", serves: 2, ingredients: [
-{ name: "Rolled oats", qty: 2, unit: "cups", store: "Aldi" },
-{ name: "Milk", qty: 500, unit: "ml", store: "Aldi" },
-{ name: "Honey", qty: 2, unit: "tbsp", store: "Woolworths" },
-{ name: "Banana", qty: 2, unit: "", store: "Market" },
-]},
-{ id: 5, name: "Chicken Rice Bowls", type: "Lunch", serves: 2, ingredients: [
-{ name: "Chicken breast", qty: 500, unit: "g", store: "Costco" },
-{ name: "Brown rice", qty: 2, unit: "cups", store: "Aldi" },
-{ name: "Baby spinach", qty: 100, unit: "g", store: "Woolworths" },
-{ name: "Sweet potato", qty: 1, unit: "", store: "Market" },
-{ name: "Olive oil", qty: 2, unit: "tbsp", store: "Aldi" },
-]},
-{ id: 6, name: "Beef Tacos", type: "Dinner", serves: 4, ingredients: [
-{ name: "Beef mince", qty: 500, unit: "g", store: "Woolworths" },
-{ name: "Taco shells", qty: 12, unit: "", store: "Woolworths" },
-{ name: "Taco seasoning", qty: 1, unit: "packet", store: "Aldi" },
-{ name: "Shredded cheese", qty: 1, unit: "cup", store: "Costco" },
-{ name: "Sour cream", qty: 200, unit: "g", store: "Woolworths" },
-{ name: "Lettuce", qty: 0.5, unit: "", store: "Market" },
-]},
+  { id: 1, name: "Banana Overnight Oats", types: ["Breakfast"], serves: 3, ingredients: [
+    { name: "Light Greek Yoghurt", qty: 240, unit: "g", store: "Woolworths" },
+    { name: "Rolled Oats", qty: 75, unit: "g", store: "Woolworths" },
+    { name: "Black Chia Seeds", qty: 30, unit: "g", store: "Costco" },
+    { name: "Chocolate Protein Powder", qty: 3, unit: "scoops", store: "Costco" },
+    { name: "Almond Milk", qty: 300, unit: "ml", store: "Aldi" },
+    { name: "Banana", qty: 1.5, unit: "whole", store: "Woolworths" },
+    { name: "Frozen Blueberries", qty: 90, unit: "g", store: "Aldi" },
+  ]},
+  { id: 2, name: "Pesto Pasta", types: ["Lunch", "Dinner"], serves: 3, ingredients: [
+    { name: "Brown Onion", qty: 0.5, unit: "whole", store: "Woolworths" },
+    { name: "Green Pesto", qty: 0.5, unit: "jar", store: "Woolworths" },
+    { name: "Light Thickened Cream", qty: 150, unit: "ml", store: "Woolworths" },
+    { name: "Bacon", qty: 150, unit: "g", store: "Costco" },
+    { name: "Broccolini", qty: 1, unit: "whole", store: "Woolworths" },
+    { name: "High Protein Pasta", qty: 0.5, unit: "packet", store: "Woolworths" },
+    { name: "Chicken Breast", qty: 500, unit: "g", store: "Woolworths" },
+  ]},
+  { id: 3, name: "Green Curry", types: ["Lunch", "Dinner"], serves: 3, ingredients: [
+    { name: "Green Curry Paste", qty: 0.5, unit: "jar", store: "Woolworths" },
+    { name: "Brown Sugar", qty: 0.5, unit: "tbsp", store: "Aldi" },
+    { name: "Green Beans", qty: 150, unit: "g", store: "Woolworths" },
+    { name: "Low Carb Potato", qty: 188, unit: "g", store: "Woolworths" },
+    { name: "Chicken Breast", qty: 500, unit: "g", store: "Woolworths" },
+    { name: "Coconut Milk", qty: 1, unit: "cans", store: "Woolworths" },
+  ]},
+  { id: 4, name: "Chicken Taco Bowls", types: ["Lunch"], serves: 3, ingredients: [
+    { name: "Lebanese Cucumber", qty: 1.33, unit: "whole", store: "Woolworths" },
+    { name: "Chicken Breast", qty: 533, unit: "g", store: "Costco" },
+    { name: "Rice", qty: 300, unit: "g", store: "Woolworths" },
+    { name: "Black Beans", qty: 150, unit: "g", store: "Aldi" },
+    { name: "Corn", qty: 167, unit: "g", store: "Aldi" },
+    { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Aldi" },
+    { name: "Cherry Tomatoes", qty: 167, unit: "g", store: "Woolworths" },
+  ]},
 ];
 
 // goals shape: { Hayden: [ { id, text, checks: { Mon: bool, ... } } ], Eilish: [...], Tyran: [...] }
@@ -287,75 +283,92 @@ function RecipeForm({ initial, onSave, onClose, title }) {
 const [draft, setDraft] = useState(initial);
 const valid = draft.name.trim().length > 0;
 
+function toggleType(mt) {
+  const current = draft.types || [];
+  const updated = current.includes(mt) ? current.filter(t => t !== mt) : [...current, mt];
+  if (updated.length === 0) return;
+  setDraft(p => ({ ...p, types: updated }));
+}
+
 function updateIng(idx, field, val) {
-const a = [...draft.ingredients];
-a[idx] = { ...a[idx], [field]: val };
-setDraft(p => ({ ...p, ingredients: a }));
+  const a = [...draft.ingredients];
+  a[idx] = { ...a[idx], [field]: val };
+  setDraft(p => ({ ...p, ingredients: a }));
 }
 function removeIng(idx) {
-setDraft(p => ({ ...p, ingredients: p.ingredients.filter((_, i) => i !== idx) }));
+  setDraft(p => ({ ...p, ingredients: p.ingredients.filter((_, i) => i !== idx) }));
 }
 
 return (
 <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "92vh" }}>
-<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-<h2 style={{ margin: 0, fontSize: 18 }}>{title}</h2>
-<button onClick={onClose} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
-</div>
-<div style={{ marginBottom: 12 }}>
-<div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Name</div>
-<input value={draft.name} onChange={e => setDraft(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Chicken Parmigiana" style={{ width: "100%" }} />
-</div>
-<div style={{ marginBottom: 16 }}>
-<div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Meal type</div>
-<div style={{ display: "flex", gap: 8 }}>
-{MEAL_TYPES.map(mt => (
-<button key={mt} className="btn" onClick={() => setDraft(p => ({ ...p, type: mt }))}
-style={{ flex: 1, padding: "8px 4px", background: draft.type === mt ? "#c8a96e" : "#1e1c18", color: draft.type === mt ? "#0c0c0a" : "#666" }}>
-{MEAL_ICONS[mt]} {mt}
-</button>
-))}
-</div>
-</div>
-<div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Ingredients</div>
-{draft.ingredients.map((ing, idx) => (
-<div key={idx} style={{ marginBottom: 12, padding: "10px", background: "#0c0c0a", borderRadius: 8, border: "1px solid #252320" }}>
-<div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: ing.unit === "custom" ? 8 : 0 }}>
-<input value={ing.name} onChange={e => updateIng(idx, "name", e.target.value)} placeholder="Ingredient" style={{ flex: 1 }} />
-<input type="number" value={ing.qty} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 60 }} />
-<select value={ing.unit} onChange={e => updateIng(idx, "unit", e.target.value)} style={{ width: 80 }}>
-<option value="">None</option>
-<option value="g">g</option>
-<option value="kg">kg</option>
-<option value="ml">ml</option>
-<option value="L">L</option>
-<option value="cups">cups</option>
-<option value="tbsp">tbsp</option>
-<option value="tsp">tsp</option>
-<option value="cans">cans</option>
-<option value="packets">packets</option>
-<option value="slices">slices</option>
-<option value="custom">Custom</option>
-</select>
-<select value={ing.store} onChange={e => updateIng(idx, "store", e.target.value)} style={{ flex: 1 }}>
-{STORES.map(s => <option key={s} value={s}>{s}</option>)}
-</select>
-<button onClick={() => removeIng(idx)}
-style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>×</button>
-</div>
-{ing.unit === "custom" && (
-<input value={ing.customUnit || ""} onChange={e => updateIng(idx, "customUnit", e.target.value)} placeholder="Custom unit" style={{ width: "100%" }} />
-)}
-</div>
-))}
-<button className="btn" onClick={() => setDraft(p => ({ ...p, ingredients: [...p.ingredients, { name: "", qty: 0, unit: "", store: "Woolworths", customUnit: "" }] }))}
-style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 14 }}>
-+ Add ingredient
-</button>
-<button className="btn" onClick={() => valid && onSave(draft)}
-style={{ background: valid ? "#c8a96e" : "#2a2824", color: valid ? "#0c0c0a" : "#555", padding: "13px 20px", width: "100%", cursor: valid ? "pointer" : "default" }}>
-Save Recipe
-</button>
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+    <h2 style={{ margin: 0, fontSize: 18 }}>{title}</h2>
+    <button onClick={onClose} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
+  </div>
+  <div style={{ marginBottom: 12 }}>
+    <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Name</div>
+    <input value={draft.name} onChange={e => setDraft(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Chicken Parmigiana" style={{ width: "100%" }} />
+  </div>
+  <div style={{ marginBottom: 16 }}>
+    <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Meal type (select all that apply)</div>
+    <div style={{ display: "flex", gap: 8 }}>
+      {MEAL_TYPES.map(mt => {
+        const selected = (draft.types || []).includes(mt);
+        return (
+          <button key={mt} className="btn" onClick={() => toggleType(mt)}
+            style={{ flex: 1, padding: "8px 4px", background: selected ? "#c8a96e" : "#1e1c18", color: selected ? "#0c0c0a" : "#666" }}>
+            {MEAL_ICONS[mt]} {mt}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+  <div style={{ marginBottom: 16 }}>
+    <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Serves</div>
+    <input type="number" min="1" value={draft.serves || ""} onChange={e => setDraft(p => ({ ...p, serves: parseInt(e.target.value) || 1 }))} placeholder="e.g. 4" style={{ width: "100%" }} />
+  </div>
+  <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Ingredients</div>
+  {draft.ingredients.map((ing, idx) => (
+    <div key={idx} style={{ marginBottom: 12, padding: "10px", background: "#0c0c0a", borderRadius: 8, border: "1px solid #252320" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: ing.unit === "custom" ? 8 : 0 }}>
+        <input value={ing.name} onChange={e => updateIng(idx, "name", e.target.value)} placeholder="Ingredient" style={{ flex: 1 }} />
+        <input type="number" value={ing.qty} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 60 }} />
+        <select value={ing.unit} onChange={e => updateIng(idx, "unit", e.target.value)} style={{ width: 80 }}>
+          <option value="">None</option>
+          <option value="g">g</option>
+          <option value="kg">kg</option>
+          <option value="ml">ml</option>
+          <option value="L">L</option>
+          <option value="cups">cups</option>
+          <option value="tbsp">tbsp</option>
+          <option value="tsp">tsp</option>
+          <option value="cans">cans</option>
+          <option value="packets">packets</option>
+          <option value="slices">slices</option>
+          <option value="whole">whole</option>
+          <option value="scoops">scoops</option>
+          <option value="jar">jar</option>
+          <option value="custom">Custom</option>
+        </select>
+        <select value={ing.store} onChange={e => updateIng(idx, "store", e.target.value)} style={{ flex: 1 }}>
+          {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button onClick={() => removeIng(idx)}
+          style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>×</button>
+      </div>
+      {ing.unit === "custom" && (
+        <input value={ing.customUnit || ""} onChange={e => updateIng(idx, "customUnit", e.target.value)} placeholder="Custom unit" style={{ width: "100%" }} />
+      )}
+    </div>
+  ))}
+  <button className="btn" onClick={() => setDraft(p => ({ ...p, ingredients: [...p.ingredients, { name: "", qty: 0, unit: "", store: "Woolworths", customUnit: "" }] }))}
+    style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 14 }}>
+    + Add ingredient
+  </button>
+  <button className="btn" onClick={() => valid && onSave(draft)}
+    style={{ background: valid ? "#c8a96e" : "#2a2824", color: valid ? "#0c0c0a" : "#555", padding: "13px 20px", width: "100%", cursor: valid ? "pointer" : "default" }}>
+    Save Recipe
+  </button>
 </div>
 );
 }
@@ -439,41 +452,55 @@ setNewShoppingItem({ name: "", qty: "", unit: "", store: "Woolworths" });
 }
 
 function generateShoppingList() {
-const byStore = {};
-const mealCounts = {}; // { recipeId: totalAttendees }
+  const consolidated = {};
 
-DAYS.forEach(day => {
-MEAL_TYPES.forEach(mealType => {
-const { mealId, attending, leftovers } = week[day][mealType];
-if (!mealId || attending.length === 0) return;
-if (!mealCounts[mealId]) mealCounts[mealId] = 0;
-mealCounts[mealId] += attending.length;
-});
-});
+  DAYS.forEach(day => {
+    MEAL_TYPES.forEach(mealType => {
+      const slot = week[day]?.[mealType];
+      if (!slot?.mealId || !slot.attending?.length) return;
+      const recipe = recipes.find(r => r.id === slot.mealId);
+      if (!recipe) return;
+      if (slot.leftovers) return;
+      const serves = recipe.serves || 1;
 
-DAYS.forEach(day => {
-MEAL_TYPES.forEach(mealType => {
-const { mealId, attending, leftovers } = week[day][mealType];
-if (!mealId || attending.length === 0) return;
-const recipe = recipes.find(r => r.id === mealId);
-if (!recipe) return;
-const scale = leftovers ? mealCounts[mealId] / recipe.serves : attending.length / recipe.serves;
-recipe.ingredients.forEach(ing => {
-const store = ing.store || "Woolworths";
-if (!byStore[store]) byStore[store] = {};
-const k = ing.name.toLowerCase();
-if (!byStore[store][k]) byStore[store][k] = { id: `${k}-${store}`, name: ing.name, store, checked: false, pantryQty: 0, pantryUnit: ing.unit || "", quantities: [] };
-byStore[store][k].quantities.push({ qty: ing.qty * scale, unit: ing.unit });
-});
-});
-});
-setShoppingList(Object.values(byStore).flatMap(items => Object.values(items)));
-setView("shopping");
+      let totalAttendees = slot.attending.length;
+      DAYS.forEach(d => {
+        MEAL_TYPES.forEach(mt => {
+          const s = week[d]?.[mt];
+          if (s?.mealId === slot.mealId && s?.leftovers && !(d === day && mt === mealType)) {
+            totalAttendees += (s.attending?.length || 0);
+          }
+        });
+      });
+
+      const scale = totalAttendees / serves;
+
+      recipe.ingredients.forEach(ing => {
+        const store = ing.store || "Woolworths";
+        const key = `${ing.name.toLowerCase()}-${store}`;
+        if (!consolidated[key]) {
+          consolidated[key] = {
+            id: key,
+            name: ing.name,
+            store,
+            checked: false,
+            pantryQty: 0,
+            pantryUnit: ing.unit || "",
+            quantities: [],
+          };
+        }
+        consolidated[key].quantities.push({ qty: ing.qty * scale, unit: ing.unit || "" });
+      });
+    });
+  });
+
+  setShoppingList(Object.values(consolidated));
+  setView("shopping");
 }
 
 function processIngredientsForEdit(ingredients) {
   return ingredients.map(ing => {
-    const predefined = ["", "g", "kg", "ml", "L", "cups", "tbsp", "tsp", "cans", "packets", "slices"];
+    const predefined = ["", "g", "kg", "ml", "L", "cups", "tbsp", "tsp", "cans", "packets", "slices", "whole", "scoops", "jar"];
     if (predefined.includes(ing.unit)) {
       return { ...ing, customUnit: "" };
     } else {
@@ -482,48 +509,24 @@ function processIngredientsForEdit(ingredients) {
   });
 }
 
-function scaleQty(qty, scale) {
-  if (typeof qty === 'string') {
-    if (scale === 1) return qty;
-    const match = qty.match(/^(\d+(?:\.\d+)?)(.*)$/);
-    if (match) {
-      const num = parseFloat(match[1]) * scale;
-      return `${Math.ceil(num)}${match[2]}`;
-    }
-    return qty;
-  } else {
-    return Math.ceil(qty * scale);
-  }
-}
-
-// ── Recipe actions ────────────────────────────────────────────────────────
 function saveNewRecipe(draft) {
-const processedIngredients = draft.ingredients.filter(i => i.name.trim()).map(i => ({
-...i,
-qty: parseFloat(i.qty) || 0,
-unit: i.unit === "custom" ? i.customUnit || "" : i.unit
-}));
-setRecipes(prev => [...prev, { ...draft, id: Date.now(), ingredients: processedIngredients }]);
-setShowAddRecipe(false);
+  const processedIngredients = draft.ingredients.filter(i => i.name.trim()).map(i => ({
+    ...i,
+    qty: parseFloat(i.qty) || 0,
+    unit: i.unit === "custom" ? i.customUnit || "" : i.unit
+  }));
+  setRecipes(prev => [...prev, { ...draft, id: Date.now(), types: draft.types || ["Dinner"], serves: draft.serves || 4, ingredients: processedIngredients }]);
+  setShowAddRecipe(false);
 }
 
 function saveEditedRecipe(draft) {
-const processedIngredients = draft.ingredients.filter(i => i.name.trim()).map(i => ({
-...i,
-qty: parseFloat(i.qty) || 0,
-unit: i.unit === "custom" ? i.customUnit || "" : i.unit
-}));
-setRecipes(prev => prev.map(r => r.id === draft.id ? { ...draft, ingredients: processedIngredients } : r));
-setEditingRecipe(null);
-}
-
-function deleteRecipe(id) {
-setRecipes(prev => prev.filter(r => r.id !== id));
-setWeek(prev => {
-const next = { ...prev };
-DAYS.forEach(d => MEAL_TYPES.forEach(m => { if (next[d][m].mealId === id) next[d] = { ...next[d], [m]: { ...next[d][m], mealId: null } }; }));
-return next;
-});
+  const processedIngredients = draft.ingredients.filter(i => i.name.trim()).map(i => ({
+    ...i,
+    qty: parseFloat(i.qty) || 0,
+    unit: i.unit === "custom" ? i.customUnit || "" : i.unit
+  }));
+  setRecipes(prev => prev.map(r => r.id === draft.id ? { ...draft, types: draft.types || ["Dinner"], serves: draft.serves || 4, ingredients: processedIngredients } : r));
+  setEditingRecipe(null);
 }
 
 // ── Goal actions ──────────────────────────────────────────────────────────
@@ -695,48 +698,50 @@ return (
   )}
 
   {/* ── Recipes View ── */}
-  {view === "recipes" && (
-    <div style={{ padding: "14px" }} className="fadeIn">
-      <button className="btn" onClick={() => setShowAddRecipe(true)}
-        style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 14 }}>
-        + New Recipe
-      </button>
-      {MEAL_TYPES.map(mt => {
-        const filtered = recipes.filter(r => r.type === mt);
-        if (!filtered.length) return null;
-        return (
-          <div key={mt} style={{ marginBottom: 20 }}>
-            <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 8 }}>
-              {MEAL_ICONS[mt]} {mt}
-            </div>
-            {filtered.map(r => (
-              <div className="card" key={r.id} style={{ marginBottom: 8, padding: "14px 16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+{view === "recipes" && (
+  <div style={{ padding: "14px" }} className="fadeIn">
+    <button className="btn" onClick={() => setShowAddRecipe(true)}
+      style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 14 }}>
+      + New Recipe
+    </button>
+    {MEAL_TYPES.map(mt => {
+      const filtered = recipes.filter(r => (r.types || [r.type]).includes(mt));
+      if (!filtered.length) return null;
+      return (
+        <div key={mt} style={{ marginBottom: 20 }}>
+          <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 8 }}>
+            {MEAL_ICONS[mt]} {mt}
+          </div>
+          {filtered.map(r => (
+            <div className="card" key={r.id} style={{ marginBottom: 8, padding: "14px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>{r.name}</span>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button className="btn" onClick={() => setEditingRecipe({ ...r, ingredients: processIngredientsForEdit(r.ingredients.map(i => ({ ...i, qty: i.qty || 0, unit: i.unit || "", customUnit: "" }))) })}
-                      style={{ background: "#1e2a3a", color: "#5c9fe0", padding: "5px 11px", fontSize: 10 }}>
-                      Edit
-                    </button>
-                    <button className="btn" onClick={() => deleteRecipe(r.id)}
-                      style={{ background: "#1e1c18", color: "#666", padding: "5px 11px", fontSize: 10 }}>
-                      Remove
-                    </button>
+                  <span className="dm" style={{ fontSize: 11, color: "#555", marginLeft: 8 }}>serves {r.serves || "?"}</span>
+                  <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                    {(r.types || [r.type]).map(t => (
+                      <span key={t} className="dm" style={{ fontSize: 9, background: "#1e1c18", color: "#c8a96e", border: "1px solid #c8a96e33", borderRadius: 100, padding: "2px 7px" }}>{t}</span>
+                    ))}
                   </div>
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                  {r.ingredients.map((ing, idx) => {
-                    const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
-                    return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name} · {ing.qty}{ing.unit ? ` ${ing.unit}` : ""}</span>;
-                  })}
-                </div>
+                <button className="btn" onClick={() => setEditingRecipe({ ...r, types: r.types || [r.type], ingredients: processIngredientsForEdit(r.ingredients.map(i => ({ ...i, qty: i.qty || 0, unit: i.unit || "", customUnit: "" }))) })}
+                  style={{ background: "#1e2a3a", color: "#5c9fe0", padding: "5px 11px", fontSize: 10 }}>
+                  Edit
+                </button>
               </div>
-            ))}
-          </div>
-        );
-      })}
-    </div>
-  )}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {r.ingredients.map((ing, idx) => {
+                  const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
+                  return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name} · {ing.qty}{ing.unit ? ` ${ing.unit}` : ""}</span>;
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    })}
+  </div>
+)}
 
   {/* ── Shopping View ── */}
   {view === "shopping" && (
@@ -990,49 +995,66 @@ return (
   </div>
 
   {/* ── Meal Picker Modal ── */}
-  {pickerFor && (
-    <div className="overlay" onClick={() => setPickerFor(null)}>
-      <div className="sheet" onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>{MEAL_ICONS[pickerFor.mealType]} {pickerFor.mealType} — {pickerFor.day}</h2>
-          <button onClick={() => setPickerFor(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
-        </div>
-        {week[pickerFor.day]?.[pickerFor.mealType]?.mealId && (
-          <button className="btn" onClick={() => { setMeal(pickerFor.day, pickerFor.mealType, null); setPickerLeftovers(false); }}
-            style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 10 }}>
-            Remove meal
-          </button>
-        )}
-        {recipes.filter(r => r.type === pickerFor.mealType).map(r => {
-          const active = week[pickerFor.day]?.[pickerFor.mealType]?.mealId === r.id;
-          return (
-            <div key={r.id} style={{ padding: "13px 15px", borderRadius: 12, marginBottom: 7, background: active ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${active ? "#c8a96e" : "#252320"}` }}>
-              <div onClick={() => setMeal(pickerFor.day, pickerFor.mealType, r.id, pickerLeftovers)} style={{ cursor: "pointer" }}>
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{r.name}</div>
-                <div className="dm" style={{ fontSize: 11, color: "#555" }}>{r.ingredients.slice(0, 3).map(i => i.name).join(", ")}{r.ingredients.length > 3 ? "..." : ""}</div>
-              </div>
-              {active && (
-                <div style={{ marginTop: 8, display: "flex", alignItems: "center" }}>
-                  <input type="checkbox" checked={pickerLeftovers} onChange={e => setPickerLeftovers(e.target.checked)} style={{ marginRight: 8 }} />
-                  <label style={{ fontSize: 12, color: "#888" }}>Make leftovers for tomorrow's lunch</label>
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {recipes.filter(r => r.type === pickerFor.mealType).length === 0 && (
-          <div className="dm" style={{ color: "#444", textAlign: "center", padding: 24, fontSize: 13 }}>No {pickerFor.mealType.toLowerCase()} recipes yet</div>
-        )}
+{pickerFor && (
+  <div className="overlay" onClick={() => setPickerFor(null)}>
+    <div className="sheet" onClick={e => e.stopPropagation()}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 18 }}>{MEAL_ICONS[pickerFor.mealType]} {pickerFor.mealType} — {pickerFor.day}</h2>
+        <button onClick={() => setPickerFor(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
       </div>
+      {week[pickerFor.day]?.[pickerFor.mealType]?.mealId && (
+        <button className="btn" onClick={() => { setMeal(pickerFor.day, pickerFor.mealType, null); setPickerLeftovers(false); }}
+          style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 10 }}>
+          Remove meal
+        </button>
+      )}
+      {recipes.filter(r => (r.types || [r.type]).includes(pickerFor.mealType)).map(r => {
+        const active = week[pickerFor.day]?.[pickerFor.mealType]?.mealId === r.id;
+        const currentLeftovers = active ? (pickerLeftovers) : false;
+        const dayIndex = DAYS.indexOf(pickerFor.day);
+        const nextDay = DAYS[(dayIndex + 1) % 7];
+        const nextDayName = FULL_DAYS[(dayIndex + 1) % 7];
+        return (
+          <div key={r.id} style={{ padding: "13px 15px", borderRadius: 12, marginBottom: 7, background: active ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${active ? "#c8a96e" : "#252320"}` }}>
+            <div onClick={() => setMeal(pickerFor.day, pickerFor.mealType, r.id, pickerLeftovers)} style={{ cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>{r.name}</span>
+                <span className="dm" style={{ fontSize: 10, color: "#555" }}>serves {r.serves || "?"}</span>
+              </div>
+              <div className="dm" style={{ fontSize: 11, color: "#555" }}>{r.ingredients.slice(0, 3).map(i => i.name).join(", ")}{r.ingredients.length > 3 ? "..." : ""}</div>
+            </div>
+            {active && pickerFor.mealType !== "Lunch" && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18", display: "flex", alignItems: "center", gap: 8 }}
+                onClick={e => e.stopPropagation()}>
+                <div onClick={() => {
+                  const newVal = !pickerLeftovers;
+                  setPickerLeftovers(newVal);
+                  setMeal(pickerFor.day, pickerFor.mealType, r.id, newVal);
+                }} style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${pickerLeftovers ? "#c8a96e" : "#555"}`, background: pickerLeftovers ? "#c8a96e" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {pickerLeftovers && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0c0c0a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+                <span className="dm" style={{ fontSize: 12, color: pickerLeftovers ? "#c8a96e" : "#666" }}>
+                  Leftovers → {nextDayName} Lunch
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {recipes.filter(r => (r.types || [r.type]).includes(pickerFor.mealType)).length === 0 && (
+        <div className="dm" style={{ color: "#444", textAlign: "center", padding: 24, fontSize: 13 }}>No {pickerFor.mealType.toLowerCase()} recipes yet</div>
+      )}
     </div>
-  )}
+  </div>
+)}
+
 
   {/* ── Add Recipe Modal ── */}
   {showAddRecipe && (
     <div className="overlay" onClick={() => setShowAddRecipe(false)}>
       <RecipeForm
         title="New Recipe"
-        initial={{ name: "", type: "Dinner", ingredients: [{ name: "", qty: "", store: "Woolworths" }] }}
+        initial={{ name: "", types: ["Dinner"], serves: 4, ingredients: [{ name: "", qty: "", store: "Woolworths" }] }}
         onSave={saveNewRecipe}
         onClose={() => setShowAddRecipe(false)}
       />
