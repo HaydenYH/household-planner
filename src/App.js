@@ -190,14 +190,14 @@ const DEFAULT_RECIPES = [
     { name: "Bacon", qty: 150, unit: "g", store: "Costco" },
     { name: "Broccolini", qty: 1, unit: "whole", store: "Woolworths" },
     { name: "High Protein Pasta", qty: 0.5, unit: "packet", store: "Woolworths" },
-    { name: "Chicken Breast", qty: 500, unit: "g", store: "Woolworths" },
+    { name: "Chicken Breast", qty: 500, unit: "g", store: "Costco" },
   ]},
   { id: 3, name: "Green Curry", types: ["Lunch", "Dinner"], serves: 3, ingredients: [
     { name: "Green Curry Paste", qty: 0.5, unit: "jar", store: "Woolworths" },
     { name: "Brown Sugar", qty: 0.5, unit: "tbsp", store: "Aldi" },
     { name: "Green Beans", qty: 150, unit: "g", store: "Woolworths" },
     { name: "Low Carb Potato", qty: 188, unit: "g", store: "Woolworths" },
-    { name: "Chicken Breast", qty: 500, unit: "g", store: "Woolworths" },
+    { name: "Chicken Breast", qty: 500, unit: "g", store: "Costco" },
     { name: "Coconut Milk", qty: 1, unit: "cans", store: "Woolworths" },
   ]},
   { id: 4, name: "Chicken Taco Bowls", types: ["Lunch"], serves: 3, ingredients: [
