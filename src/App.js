@@ -886,7 +886,7 @@ return (
   }
   return { qty: parseFloat(left.toFixed(2)), unit: t.unit };
 }).filter(t => t.qty > 0) : [];
-                  const toBuyText = toBuy.length > 0 ? toBuy.map(t => `${t.qty} ${t.unit}`).join(", ") : consolidateQuantities(item.quantities);
+                  const toBuyText = toBuy.length > 0 ? toBuy.map(t => `${t.qty} ${t.unit}`).join(", ") : (pantryQty > 0 ? "✓ in pantry" : consolidateQuantities(item.quantities));
 
                   return (
                     <div key={item.id} style={{ borderBottom: idx < items.length - 1 ? "1px solid #1a1814" : "none" }}>
