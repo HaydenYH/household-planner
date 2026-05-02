@@ -462,22 +462,20 @@ return { ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], a
 }
 
 function setMeal(day, mealType, recipeId, leftovers = false) {
-setWeek(prev => {
-  const newWeek = { ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], mealId: recipeId, leftovers } } };
-  if (leftovers && mealType !== "Lunch") {
-    // Auto-assign leftovers to next day's lunch
-    const dayIndex = DAYS.indexOf(day);
-    const nextDay = DAYS[(dayIndex + 1) % 7];
-    newWeek[nextDay] = { ...newWeek[nextDay], Lunch: { ...newWeek[nextDay].Lunch, mealId: recipeId, leftovers: true } };
-  }
-  return newWeek;
-});
-setPickerFor(null);
-setTimeout(() => {
-  if (safeShoppingList.length > 0) {
-    generateShoppingList(false);
-  }
-}, 100);
+  setWeek(prev => {
+    const newWeek = { ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], mealId: recipeId, leftovers } } };
+    if (leftovers && mealType !== "Lunch") {
+      const dayIndex = DAYS.indexOf(day);
+      const nextDay = DAYS[(dayIndex + 1) % 7];
+      newWeek[nextDay] = { ...newWeek[nextDay], Lunch: { ...newWeek[nextDay].Lunch, mealId: recipeId, leftovers: true } };
+    }
+    if (safeShoppingList.length > 0) {
+      const updatedList = buildShoppingListFromWeek(newWeek);
+      setShoppingList(updatedList);
+    }
+    return newWeek;
+  });
+  setPickerFor(null);
 }
 
 function changeWeek(offset) {
@@ -513,30 +511,26 @@ setShowAddShoppingItem(false);
 setNewShoppingItem({ name: "", qty: "", unit: "", store: "Woolworths" });
 }
 
-function generateShoppingList(switchView = true) {
+function buildShoppingListFromWeek(currentWeek) {
   const consolidated = {};
-
   DAYS.forEach(day => {
     MEAL_TYPES.forEach(mealType => {
-      const slot = week[day]?.[mealType];
+      const slot = currentWeek[day]?.[mealType];
       if (!slot?.mealId || !slot.attending?.length) return;
       const recipe = recipes.find(r => r.id === slot.mealId);
       if (!recipe) return;
       if (slot.leftovers) return;
       const serves = recipe.serves || 1;
-
       let totalAttendees = slot.attending.length;
       DAYS.forEach(d => {
         MEAL_TYPES.forEach(mt => {
-          const s = week[d]?.[mt];
+          const s = currentWeek[d]?.[mt];
           if (s?.mealId === slot.mealId && s?.leftovers && !(d === day && mt === mealType)) {
             totalAttendees += (s.attending?.length || 0);
           }
         });
       });
-
       const scale = totalAttendees / serves;
-
       recipe.ingredients.forEach(ing => {
         const store = ing.store || "Woolworths";
         const key = `${ing.name.toLowerCase()}-${store}`;
@@ -555,11 +549,15 @@ function generateShoppingList(switchView = true) {
       });
     });
   });
+  return Object.values(consolidated);
+}
 
-  setShoppingList(Object.values(consolidated));
-  setShoppingListSnapshot(JSON.stringify(week));
+function generateShoppingList(switchView = true) {
+  const list = buildShoppingListFromWeek(week);
+  setShoppingList(list);
   if (switchView) setView("shopping");
 }
+
 
 function processIngredientsForEdit(ingredients) {
   return ingredients.map(ing => {
