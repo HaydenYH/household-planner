@@ -116,26 +116,30 @@ function consolidateQuantities(quantities) {
   const incompatible = {};
   const list = Array.isArray(quantities) ? quantities : [];
   for (const { qty, unit } of list) {
-    if (unit in UNIT_CONVERSIONS) {
-      const base = unit === 'g' || unit === 'kg' ? 'g' : 'ml';
-      const converted = qty * (UNIT_CONVERSIONS[unit][base] || 1);
+    const numQty = parseFloat(qty);
+    if (isNaN(numQty) || numQty <= 0) continue;
+    const cleanUnit = unit || "";
+    if (cleanUnit in UNIT_CONVERSIONS) {
+      const base = cleanUnit === "g" || cleanUnit === "kg" ? "g" : "ml";
+      const converted = numQty * (UNIT_CONVERSIONS[cleanUnit][base] || 1);
       if (!compatible[base]) compatible[base] = 0;
       compatible[base] += converted;
     } else {
-      if (!incompatible[unit]) incompatible[unit] = 0;
-      incompatible[unit] += qty;
+      if (!incompatible[cleanUnit]) incompatible[cleanUnit] = 0;
+      incompatible[cleanUnit] += numQty;
     }
   }
   const parts = [];
   for (const [base, total] of Object.entries(compatible)) {
-    const displayUnit = total >= 1000 && base === 'g' ? 'kg' : total >= 1000 && base === 'ml' ? 'L' : base;
-    const displayQty = displayUnit === 'kg' ? total / 1000 : displayUnit === 'L' ? total / 1000 : total;
-    parts.push(`${Math.ceil(displayQty)} ${displayUnit}`);
+    const displayUnit = total >= 1000 && base === "g" ? "kg" : total >= 1000 && base === "ml" ? "L" : base;
+    const displayQty = displayUnit === "kg" || displayUnit === "L" ? total / 1000 : total;
+    parts.push(`${parseFloat(displayQty.toFixed(2))} ${displayUnit}`);
   }
   for (const [unit, qty] of Object.entries(incompatible)) {
-    parts.push(`${qty} ${unit}`);
+    if (unit) parts.push(`${parseFloat(qty.toFixed(2))} ${unit}`);
+    else parts.push(`${parseFloat(qty.toFixed(2))}`);
   }
-  return parts.join(', ');
+  return parts.length > 0 ? parts.join(", ") : "—";
 }
 
 function getQuantitySummary(quantities) {
@@ -771,62 +775,78 @@ return (
                       <div className="check-box" style={{ border: `2px solid ${item.checked ? sc.accent : "#333"}`, background: item.checked ? sc.accent : "transparent" }}>
                         {item.checked && <svg width="12" height="9" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="#0c0c0a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div className="dm" style={{ fontSize: 14, fontWeight: 500, textDecoration: item.checked ? "line-through" : "none" }}>{item.name}</div>
-                        <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-                          <div className="dm" style={{ fontSize: 11, color: "#888", fontWeight: 500, padding: "6px 0" }}>Need: <span style={{ color: "#c8a96e" }}>{consolidateQuantities(item.quantities)}</span></div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#12100e", borderRadius: 12, padding: "6px 8px" }} onClick={e => e.stopPropagation()}>
-                            <input type="number" min="0" value={item.pantryQty || ""} onChange={e => {
-                              const value = e.target.value;
-                              setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryQty: value === "" ? 0 : parseFloat(value) } : i) : []);
-                            }} placeholder="0" style={{ width: 50, background: "transparent", border: "1px solid #333", color: "#fff", borderRadius: 6, padding: "4px 6px" }} />
-                            <select value={item.pantryUnit || (item.quantities?.[0]?.unit || "")} onChange={e => {
-                              setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryUnit: e.target.value } : i) : []);
-                            }} style={{ background: "transparent", color: "#fff", border: "1px solid #333", borderRadius: 6, padding: "4px 6px", minWidth: 60, fontSize: 11 }}>
-                              <option value="">none</option>
-                              <option value="g">g</option>
-                              <option value="kg">kg</option>
-                              <option value="ml">ml</option>
-                              <option value="L">L</option>
-                              <option value="cups">cups</option>
-                              <option value="tbsp">tbsp</option>
-                              <option value="tsp">tsp</option>
-                              <option value="cans">cans</option>
-                              <option value="packets">packets</option>
-                              <option value="slices">slices</option>
-                            </select>
-                            <span className="dm" style={{ fontSize: 10, color: "#555", whiteSpace: "nowrap" }}>in pantry</span>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#12100e", borderRadius: 12, padding: "6px 8px" }} onClick={e => e.stopPropagation()}>
-                            <select value={item.tempStore || item.store} onChange={e => {
-                              const nextStore = e.target.value;
-                              setShoppingList(prev => Array.isArray(prev) ? prev.map(i => {
-                                if (i.id !== item.id) return i;
-                                return { ...i, tempStore: nextStore === i.store ? null : nextStore };
-                              }) : []);
-                            }} style={{ background: "transparent", color: "#fff", border: "1px solid #333", borderRadius: 6, padding: "4px 6px", minWidth: 100, fontSize: 11 }}>
-                              {STORES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                        {(() => {
-                          const totals = getQuantitySummary(item.quantities);
-                          if (!Array.isArray(totals) || totals.length === 0) return null;
-                          const pantryQty = parseFloat(item.pantryQty) || 0;
-                          const pantryUnit = item.pantryUnit || (item.quantities?.[0]?.unit || "");
-                          const remaining = totals.filter(t => t && typeof t.qty === "number" && t.unit).map(t => {
-                            let leftover = t.qty;
-                            if (pantryUnit && pantryUnit === t.unit && !isNaN(pantryQty)) {
-                              leftover = Math.max(t.qty - pantryQty, 0);
-                            }
-                            const display = Number.isInteger(leftover) ? leftover : parseFloat(leftover.toFixed(2));
-                            return { qty: display, unit: t.unit };
-                          });
-                          if (remaining.length === 0) return null;
-                          const remainingText = remaining.map(r => `${r.qty} ${r.unit}`).join(", ");
-                          return <div className="dm" style={{ fontSize: 11, color: "#8bc34a", marginTop: 4, fontWeight: 500 }}>🛒 {remainingText}</div>;
-                        })()}
-                      </div>
+<div style={{ flex: 1 }}>
+  <div className="dm" style={{ fontSize: 14, fontWeight: 600, textDecoration: item.checked ? "line-through" : "none", marginBottom: 6 }}>{item.name}</div>
+  
+  {/* Big "need" amount */}
+  <div className="dm" style={{ fontSize: 20, fontWeight: 700, color: "#c8a96e", marginBottom: 8 }}>
+    {consolidateQuantities(item.quantities)}
+  </div>
+
+  {/* Pantry row — compact */}
+  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={e => e.stopPropagation()}>
+      <span className="dm" style={{ fontSize: 10, color: "#555" }}>In pantry:</span>
+      <input type="number" min="0" value={item.pantryQty || ""} onChange={e => {
+        const value = e.target.value;
+        setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryQty: value === "" ? 0 : parseFloat(value) } : i) : []);
+      }} placeholder="0" style={{ width: 44, background: "#1a1814", border: "1px solid #2a2824", color: "#aaa", borderRadius: 6, padding: "3px 6px", fontSize: 11 }} />
+      <select value={item.pantryUnit || (item.quantities?.[0]?.unit || "")} onChange={e => {
+        setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryUnit: e.target.value } : i) : []);
+      }} style={{ background: "#1a1814", color: "#aaa", border: "1px solid #2a2824", borderRadius: 6, padding: "3px 5px", fontSize: 11 }}>
+        <option value="">—</option>
+        <option value="g">g</option>
+        <option value="kg">kg</option>
+        <option value="ml">ml</option>
+        <option value="L">L</option>
+        <option value="cups">cups</option>
+        <option value="tbsp">tbsp</option>
+        <option value="tsp">tsp</option>
+        <option value="cans">cans</option>
+        <option value="packets">packets</option>
+        <option value="slices">slices</option>
+      </select>
+    </div>
+
+    {/* Still need */}
+    {(() => {
+      const totals = getQuantitySummary(item.quantities);
+      if (!Array.isArray(totals) || totals.length === 0) return null;
+      const pantryQty = parseFloat(item.pantryQty) || 0;
+      const pantryUnit = item.pantryUnit || (item.quantities?.[0]?.unit || "");
+      const stillNeeded = totals.map(t => {
+        let left = t.qty;
+        if (pantryUnit && pantryUnit === t.unit && pantryQty > 0) {
+          left = Math.max(t.qty - pantryQty, 0);
+        }
+        return { qty: parseFloat(left.toFixed(2)), unit: t.unit };
+      }).filter(t => t.qty > 0);
+      if (stillNeeded.length === 0 || pantryQty === 0) return null;
+      return (
+        <span className="dm" style={{ fontSize: 11, color: "#8bc34a", fontWeight: 600 }}>
+          → buy {stillNeeded.map(r => `${r.qty} ${r.unit}`).join(", ")}
+        </span>
+      );
+    })()}
+  </div>
+
+  {/* Store override — compact */}
+  <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 5 }} onClick={e => e.stopPropagation()}>
+    <span className="dm" style={{ fontSize: 10, color: "#555" }}>Store:</span>
+    <select value={item.tempStore || item.store} onChange={e => {
+      const nextStore = e.target.value;
+      setShoppingList(prev => Array.isArray(prev) ? prev.map(i => {
+        if (i.id !== item.id) return i;
+        return { ...i, tempStore: nextStore === i.store ? null : nextStore };
+      }) : []);
+    }} style={{ background: "#1a1814", color: item.tempStore && item.tempStore !== item.store ? "#c8a96e" : "#aaa", border: "1px solid #2a2824", borderRadius: 6, padding: "3px 6px", fontSize: 11 }}>
+      {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+    </select>
+    {item.tempStore && item.tempStore !== item.store && (
+      <span className="dm" style={{ fontSize: 9, color: "#c8a96e" }}>(override)</span>
+    )}
+  </div>
+</div>
                       <button onClick={e => { e.stopPropagation(); removeItem(item.id); }}
                         style={{ background: "none", border: "none", color: "#333", fontSize: 20, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
                     </div>
