@@ -19,7 +19,7 @@
 // create policy "Public update" on household_data for update using (true);
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || "";
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || "";
@@ -98,50 +98,107 @@ Costco:     { bg: "#3a1a1a", accent: "#f44336", light: "#f4433622" },
 Market:     { bg: "#2a1f0a", accent: "#ff9800", light: "#ff980022" },
 };
 
-const MEAL_ICONS = { Breakfast: "☀️", Lunch: "🌤", Dinner: "🌙" };
+const UNIT_CONVERSIONS = {
+  g: { kg: 0.001, g: 1 },
+  kg: { g: 1000, kg: 1 },
+  ml: { L: 0.001, ml: 1 },
+  L: { ml: 1000, L: 1 },
+};
+
+function consolidateQuantities(quantities) {
+  const compatible = {};
+  const incompatible = {};
+  for (const { qty, unit } of quantities) {
+    if (unit in UNIT_CONVERSIONS) {
+      const base = unit === 'g' || unit === 'kg' ? 'g' : 'ml';
+      const converted = qty * (UNIT_CONVERSIONS[unit][base] || 1);
+      if (!compatible[base]) compatible[base] = 0;
+      compatible[base] += converted;
+    } else {
+      if (!incompatible[unit]) incompatible[unit] = 0;
+      incompatible[unit] += qty;
+    }
+  }
+  const parts = [];
+  for (const [base, total] of Object.entries(compatible)) {
+    const displayUnit = total >= 1000 && base === 'g' ? 'kg' : total >= 1000 && base === 'ml' ? 'L' : base;
+    const displayQty = displayUnit === 'kg' ? total / 1000 : displayUnit === 'L' ? total / 1000 : total;
+    parts.push(`${Math.ceil(displayQty)} ${displayUnit}`);
+  }
+  for (const [unit, qty] of Object.entries(incompatible)) {
+    parts.push(`${qty} ${unit}`);
+  }
+  return parts.join(', ');
+}
+
+function getQuantitySummary(quantities) {
+  const compatible = {};
+  const incompatible = {};
+  for (const { qty, unit } of quantities) {
+    if (unit in UNIT_CONVERSIONS) {
+      const base = unit === 'g' || unit === 'kg' ? 'g' : 'ml';
+      const converted = qty * (UNIT_CONVERSIONS[unit][base] || 1);
+      if (!compatible[base]) compatible[base] = 0;
+      compatible[base] += converted;
+    } else {
+      if (!incompatible[unit]) incompatible[unit] = 0;
+      incompatible[unit] += qty;
+    }
+  }
+  const totals = [];
+  for (const [base, total] of Object.entries(compatible)) {
+    const displayUnit = total >= 1000 && base === 'g' ? 'kg' : total >= 1000 && base === 'ml' ? 'L' : base;
+    const displayQty = displayUnit === 'kg' ? total / 1000 : displayUnit === 'L' ? total / 1000 : total;
+    totals.push({ qty: displayQty, unit: displayUnit });
+  }
+  for (const [unit, qty] of Object.entries(incompatible)) {
+    totals.push({ qty, unit });
+  }
+  return totals;
+}
 
 const DEFAULT_RECIPES = [
-{ id: 1, name: "Spaghetti Bolognese", type: "Dinner", ingredients: [
-{ name: "Spaghetti", qty: "400g", store: "Woolworths" },
-{ name: "Beef mince", qty: "500g", store: "Woolworths" },
-{ name: "Crushed tomatoes", qty: "2 cans", store: "Aldi" },
-{ name: "Onion", qty: "1", store: "Market" },
-{ name: "Garlic", qty: "4 cloves", store: "Market" },
-{ name: "Olive oil", qty: "2 tbsp", store: "Aldi" },
+{ id: 1, name: "Spaghetti Bolognese", type: "Dinner", serves: 4, ingredients: [
+{ name: "Spaghetti", qty: 400, unit: "g", store: "Woolworths" },
+{ name: "Beef mince", qty: 500, unit: "g", store: "Woolworths" },
+{ name: "Crushed tomatoes", qty: 2, unit: "cans", store: "Aldi" },
+{ name: "Onion", qty: 1, unit: "", store: "Market" },
+{ name: "Garlic", qty: 4, unit: "cloves", store: "Market" },
+{ name: "Olive oil", qty: 2, unit: "tbsp", store: "Aldi" },
 ]},
-{ id: 2, name: "Chicken Stir Fry", type: "Dinner", ingredients: [
-{ name: "Chicken breast", qty: "600g", store: "Woolworths" },
-{ name: "Mixed vegetables", qty: "400g", store: "Market" },
-{ name: "Soy sauce", qty: "3 tbsp", store: "Woolworths" },
-{ name: "Jasmine rice", qty: "2 cups", store: "Costco" },
-{ name: "Sesame oil", qty: "1 tbsp", store: "Woolworths" },
+{ id: 2, name: "Chicken Stir Fry", type: "Dinner", serves: 4, ingredients: [
+{ name: "Chicken breast", qty: 600, unit: "g", store: "Woolworths" },
+{ name: "Mixed vegetables", qty: 400, unit: "g", store: "Market" },
+{ name: "Soy sauce", qty: 3, unit: "tbsp", store: "Woolworths" },
+{ name: "Jasmine rice", qty: 2, unit: "cups", store: "Costco" },
+{ name: "Sesame oil", qty: 1, unit: "tbsp", store: "Woolworths" },
 ]},
-{ id: 3, name: "Avocado Toast", type: "Breakfast", ingredients: [
-{ name: "Sourdough bread", qty: "4 slices", store: "Market" },
-{ name: "Avocados", qty: "2", store: "Market" },
-{ name: "Eggs", qty: "4", store: "Aldi" },
-{ name: "Feta cheese", qty: "100g", store: "Woolworths" },
+{ id: 3, name: "Avocado Toast", type: "Breakfast", serves: 2, ingredients: [
+{ name: "Sourdough bread", qty: 4, unit: "slices", store: "Market" },
+{ name: "Avocados", qty: 2, unit: "", store: "Market" },
+{ name: "Eggs", qty: 4, unit: "", store: "Aldi" },
+{ name: "Feta cheese", qty: 100, unit: "g", store: "Woolworths" },
 ]},
-{ id: 4, name: "Porridge", type: "Breakfast", ingredients: [
-{ name: "Rolled oats", qty: "2 cups", store: "Aldi" },
-{ name: "Milk", qty: "500ml", store: "Aldi" },
-{ name: "Honey", qty: "2 tbsp", store: "Woolworths" },
-{ name: "Banana", qty: "2", store: "Market" },
+{ id: 4, name: "Porridge", type: "Breakfast", serves: 2, ingredients: [
+{ name: "Rolled oats", qty: 2, unit: "cups", store: "Aldi" },
+{ name: "Milk", qty: 500, unit: "ml", store: "Aldi" },
+{ name: "Honey", qty: 2, unit: "tbsp", store: "Woolworths" },
+{ name: "Banana", qty: 2, unit: "", store: "Market" },
 ]},
-{ id: 5, name: "Chicken Rice Bowls", type: "Lunch", ingredients: [
-{ name: "Chicken breast", qty: "500g", store: "Costco" },
-{ name: "Brown rice", qty: "2 cups", store: "Aldi" },
-{ name: "Baby spinach", qty: "100g", store: "Woolworths" },
-{ name: "Sweet potato", qty: "1 large", store: "Market" },
-{ name: "Olive oil", qty: "2 tbsp", store: "Aldi" },
+{ id: 5, name: "Chicken Rice Bowls", type: "Lunch", serves: 2, ingredients: [
+{ name: "Chicken breast", qty: 500, unit: "g", store: "Costco" },
+{ name: "Brown rice", qty: 2, unit: "cups", store: "Aldi" },
+{ name: "Baby spinach", qty: 100, unit: "g", store: "Woolworths" },
+{ name: "Sweet potato", qty: 1, unit: "", store: "Market" },
+{ name: "Olive oil", qty: 2, unit: "tbsp", store: "Aldi" },
 ]},
-{ id: 6, name: "Beef Tacos", type: "Dinner", ingredients: [
-{ name: "Beef mince", qty: "500g", store: "Woolworths" },
-{ name: "Taco shells", qty: "12", store: "Woolworths" },
-{ name: "Taco seasoning", qty: "1 packet", store: "Aldi" },
-{ name: "Shredded cheese", qty: "1 cup", store: "Costco" },
-{ name: "Sour cream", qty: "200g", store: "Woolworths" },
-{ name: "Lettuce", qty: "1/2 head", store: "Market" },
+{ id: 6, name: "Beef Tacos", type: "Dinner", serves: 4, ingredients: [
+{ name: "Beef mince", qty: 500, unit: "g", store: "Woolworths" },
+{ name: "Taco shells", qty: 12, unit: "", store: "Woolworths" },
+{ name: "Taco seasoning", qty: 1, unit: "packet", store: "Aldi" },
+{ name: "Shredded cheese", qty: 1, unit: "cup", store: "Costco" },
+{ name: "Sour cream", qty: 200, unit: "g", store: "Woolworths" },
+{ name: "Lettuce", qty: 0.5, unit: "", store: "Market" },
 ]},
 ];
 
@@ -154,7 +211,7 @@ return g;
 
 function buildEmptyWeek() {
 const w = {};
-DAYS.forEach(d => { w[d] = {}; MEAL_TYPES.forEach(m => { w[d][m] = { attending: [...MEMBERS], mealId: null }; }); });
+DAYS.forEach(d => { w[d] = {}; MEAL_TYPES.forEach(m => { w[d][m] = { attending: [...MEMBERS], mealId: null, leftovers: false }; }); });
 return w;
 }
 
@@ -166,6 +223,16 @@ mon.setDate(now.getDate() + diff);
 return mon;
 }
 
+function getWeekKey(startDate) {
+return `week-${startDate.toISOString().slice(0, 10)}`;
+}
+
+function addDays(date, days) {
+const next = new Date(date);
+next.setDate(next.getDate() + days);
+return next;
+}
+
 // ── useSharedState hook ───────────────────────────────────────────────────────
 function useSharedState(key, defaultValue) {
 const [state, setState] = useState(defaultValue);
@@ -174,8 +241,9 @@ const localRef = useRef(false);
 const saveTimer = useRef(null);
 
 useEffect(() => {
+setState(defaultValue);
 sb.get(key).then(val => {
-if (val !== null) setState(val);
+setState(val !== null ? val : defaultValue);
 setSynced(true);
 }).catch(() => setSynced(true));
 }, [key]);
@@ -239,17 +307,36 @@ style={{ flex: 1, padding: "8px 4px", background: draft.type === mt ? "#c8a96e" 
 </div>
 <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Ingredients</div>
 {draft.ingredients.map((ing, idx) => (
-<div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 60px 1fr 28px", gap: 5, marginBottom: 7, alignItems: "center" }}>
-<input value={ing.name} onChange={e => updateIng(idx, "name", e.target.value)} placeholder="Ingredient" />
-<input value={ing.qty} onChange={e => updateIng(idx, "qty", e.target.value)} placeholder="Qty" />
-<select value={ing.store} onChange={e => updateIng(idx, "store", e.target.value)} style={{ width: "100%" }}>
+<div key={idx} style={{ marginBottom: 12, padding: "10px", background: "#0c0c0a", borderRadius: 8, border: "1px solid #252320" }}>
+<div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: ing.unit === "custom" ? 8 : 0 }}>
+<input value={ing.name} onChange={e => updateIng(idx, "name", e.target.value)} placeholder="Ingredient" style={{ flex: 1 }} />
+<input type="number" value={ing.qty} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 60 }} />
+<select value={ing.unit} onChange={e => updateIng(idx, "unit", e.target.value)} style={{ width: 80 }}>
+<option value="">None</option>
+<option value="g">g</option>
+<option value="kg">kg</option>
+<option value="ml">ml</option>
+<option value="L">L</option>
+<option value="cups">cups</option>
+<option value="tbsp">tbsp</option>
+<option value="tsp">tsp</option>
+<option value="cans">cans</option>
+<option value="packets">packets</option>
+<option value="slices">slices</option>
+<option value="custom">Custom</option>
+</select>
+<select value={ing.store} onChange={e => updateIng(idx, "store", e.target.value)} style={{ flex: 1 }}>
 {STORES.map(s => <option key={s} value={s}>{s}</option>)}
 </select>
 <button onClick={() => removeIng(idx)}
-style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1, textAlign: "center" }}>×</button>
+style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>×</button>
+</div>
+{ing.unit === "custom" && (
+<input value={ing.customUnit || ""} onChange={e => updateIng(idx, "customUnit", e.target.value)} placeholder="Custom unit" style={{ width: "100%" }} />
+)}
 </div>
 ))}
-<button className="btn" onClick={() => setDraft(p => ({ ...p, ingredients: [...p.ingredients, { name: "", qty: "", store: "Woolworths" }] }))}
+<button className="btn" onClick={() => setDraft(p => ({ ...p, ingredients: [...p.ingredients, { name: "", qty: 0, unit: "", store: "Woolworths", customUnit: "" }] }))}
 style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 14 }}>
 + Add ingredient
 </button>
@@ -261,24 +348,28 @@ Save Recipe
 );
 }
 
-
+// ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
 const [view, setView] = useState("week");
 const [selectedDay, setSelectedDay] = useState(0);
+const [weekStart, setWeekStart] = useState(getWeekStart());
+const defaultWeek = useMemo(() => buildEmptyWeek(), []);
 
 const [recipes, setRecipes, recipesReady] = useSharedState("recipes", DEFAULT_RECIPES);
-const [week, setWeek, weekReady] = useSharedState("week", buildEmptyWeek());
+const [week, setWeek, weekReady] = useSharedState(getWeekKey(weekStart), defaultWeek);
 const [shoppingList, setShoppingList, shopReady] = useSharedState("shopping", []);
 const [goals, setGoals, goalsReady] = useSharedState("goals", buildEmptyGoals());
 
 const [pickerFor, setPickerFor] = useState(null);
+const [pickerLeftovers, setPickerLeftovers] = useState(false);
 const [showAddRecipe, setShowAddRecipe] = useState(false);
 const [editingRecipe, setEditingRecipe] = useState(null); // recipe object
+const [showAddShoppingItem, setShowAddShoppingItem] = useState(false);
+const [newShoppingItem, setNewShoppingItem] = useState({ name: "", qty: "", unit: "", store: "Woolworths" });
 const [newGoalMember, setNewGoalMember] = useState(null); // member name
 const [newGoalText, setNewGoalText] = useState("");
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
-const weekStart = getWeekStart();
 
 // ── Meal actions ──────────────────────────────────────────────────────────
 function toggleAttending(day, mealType, member) {
@@ -288,24 +379,79 @@ return { ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], a
 });
 }
 
-function setMeal(day, mealType, recipeId) {
-setWeek(prev => ({ ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], mealId: recipeId } } }));
+function setMeal(day, mealType, recipeId, leftovers = false) {
+setWeek(prev => {
+  const newWeek = { ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], mealId: recipeId, leftovers } } };
+  if (leftovers && mealType !== "Lunch") {
+    // Auto-assign leftovers to next day's lunch
+    const dayIndex = DAYS.indexOf(day);
+    const nextDay = DAYS[(dayIndex + 1) % 7];
+    newWeek[nextDay] = { ...newWeek[nextDay], Lunch: { ...newWeek[nextDay].Lunch, mealId: recipeId, leftovers: true } };
+  }
+  return newWeek;
+});
 setPickerFor(null);
+}
+
+function changeWeek(offset) {
+setWeekStart(prev => addDays(prev, offset));
+setSelectedDay(0);
+}
+
+function toggleCheck(itemId) {
+setShoppingList(prev => prev.map(item => item.id === itemId ? { ...item, checked: !item.checked } : item));
+}
+
+function removeItem(itemId) {
+setShoppingList(prev => prev.filter(item => item.id !== itemId));
+}
+
+function addShoppingItem() {
+const name = newShoppingItem.name.trim();
+const qty = parseFloat(newShoppingItem.qty) || 0;
+if (!name || qty <= 0) return;
+setShoppingList(prev => [
+  ...prev,
+  {
+    id: `custom-${Date.now()}-${Math.round(Math.random() * 1000)}`,
+    name,
+    store: newShoppingItem.store || "Woolworths",
+    checked: false,
+    pantryQty: 0,
+    pantryUnit: newShoppingItem.unit || "",
+    quantities: [{ qty, unit: newShoppingItem.unit || "" }],
+  }
+]);
+setShowAddShoppingItem(false);
+setNewShoppingItem({ name: "", qty: "", unit: "", store: "Woolworths" });
 }
 
 function generateShoppingList() {
 const byStore = {};
+const mealCounts = {}; // { recipeId: totalAttendees }
+
 DAYS.forEach(day => {
 MEAL_TYPES.forEach(mealType => {
-const { mealId, attending } = week[day][mealType];
+const { mealId, attending, leftovers } = week[day][mealType];
+if (!mealId || attending.length === 0) return;
+if (!mealCounts[mealId]) mealCounts[mealId] = 0;
+mealCounts[mealId] += attending.length;
+});
+});
+
+DAYS.forEach(day => {
+MEAL_TYPES.forEach(mealType => {
+const { mealId, attending, leftovers } = week[day][mealType];
 if (!mealId || attending.length === 0) return;
 const recipe = recipes.find(r => r.id === mealId);
 if (!recipe) return;
+const scale = leftovers ? mealCounts[mealId] / recipe.serves : attending.length / recipe.serves;
 recipe.ingredients.forEach(ing => {
 const store = ing.store || "Woolworths";
 if (!byStore[store]) byStore[store] = {};
 const k = ing.name.toLowerCase();
-if (!byStore[store][k]) byStore[store][k] = { id: `${k}-${store}`, name: ing.name, qty: ing.qty, store, checked: false };
+if (!byStore[store][k]) byStore[store][k] = { id: `${k}-${store}`, name: ing.name, store, checked: false, pantryQty: 0, pantryUnit: ing.unit || "", quantities: [] };
+byStore[store][k].quantities.push({ qty: ing.qty * scale, unit: ing.unit });
 });
 });
 });
@@ -313,17 +459,49 @@ setShoppingList(Object.values(byStore).flatMap(items => Object.values(items)));
 setView("shopping");
 }
 
-function toggleCheck(id) { setShoppingList(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i)); }
-function removeItem(id) { setShoppingList(prev => prev.filter(i => i.id !== id)); }
+function processIngredientsForEdit(ingredients) {
+  return ingredients.map(ing => {
+    const predefined = ["", "g", "kg", "ml", "L", "cups", "tbsp", "tsp", "cans", "packets", "slices"];
+    if (predefined.includes(ing.unit)) {
+      return { ...ing, customUnit: "" };
+    } else {
+      return { ...ing, unit: "custom", customUnit: ing.unit };
+    }
+  });
+}
+
+function scaleQty(qty, scale) {
+  if (typeof qty === 'string') {
+    if (scale === 1) return qty;
+    const match = qty.match(/^(\d+(?:\.\d+)?)(.*)$/);
+    if (match) {
+      const num = parseFloat(match[1]) * scale;
+      return `${Math.ceil(num)}${match[2]}`;
+    }
+    return qty;
+  } else {
+    return Math.ceil(qty * scale);
+  }
+}
 
 // ── Recipe actions ────────────────────────────────────────────────────────
 function saveNewRecipe(draft) {
-setRecipes(prev => [...prev, { ...draft, id: Date.now(), ingredients: draft.ingredients.filter(i => i.name.trim()) }]);
+const processedIngredients = draft.ingredients.filter(i => i.name.trim()).map(i => ({
+...i,
+qty: parseFloat(i.qty) || 0,
+unit: i.unit === "custom" ? i.customUnit || "" : i.unit
+}));
+setRecipes(prev => [...prev, { ...draft, id: Date.now(), ingredients: processedIngredients }]);
 setShowAddRecipe(false);
 }
 
 function saveEditedRecipe(draft) {
-setRecipes(prev => prev.map(r => r.id === draft.id ? { ...draft, ingredients: draft.ingredients.filter(i => i.name.trim()) } : r));
+const processedIngredients = draft.ingredients.filter(i => i.name.trim()).map(i => ({
+...i,
+qty: parseFloat(i.qty) || 0,
+unit: i.unit === "custom" ? i.customUnit || "" : i.unit
+}));
+setRecipes(prev => prev.map(r => r.id === draft.id ? { ...draft, ingredients: processedIngredients } : r));
 setEditingRecipe(null);
 }
 
@@ -388,6 +566,13 @@ return (
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: "-.02em" }}>
           {view === "week" ? "Weekly Planner" : view === "day" ? FULL_DAYS[selectedDay] : view === "recipes" ? "Recipe Book" : view === "shopping" ? "Shopping List" : "Weekly Goals"}
         </h1>
+        {view === "week" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
+            <button className="btn" onClick={() => changeWeek(-7)} style={{ padding: "8px 12px", background: "#1e1c18", color: "#c8a96e" }}>←</button>
+            <span className="dm" style={{ fontSize: 12, color: "#aaa" }}>Week of {weekStart.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</span>
+            <button className="btn" onClick={() => changeWeek(7)} style={{ padding: "8px 12px", background: "#1e1c18", color: "#c8a96e" }}>→</button>
+          </div>
+        )}
       </div>
       {(view === "week" || view === "day") && mealsPlanned > 0 && (
         <button className="btn" onClick={generateShoppingList} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>🛒 Shop</button>
@@ -466,7 +651,7 @@ return (
                   </div>
                 )}
               </div>
-              <button className="meal-pill" onClick={() => setPickerFor({ day: DAYS[selectedDay], mealType: mt })}>
+              <button className="meal-pill" onClick={() => { setPickerFor({ day: DAYS[selectedDay], mealType: mt }); setPickerLeftovers(week[DAYS[selectedDay]][mt].leftovers || false); }}>
                 {recipe ? recipe.name : "+ Add meal"}
               </button>
             </div>
@@ -516,7 +701,7 @@ return (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>{r.name}</span>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button className="btn" onClick={() => setEditingRecipe({ ...r, ingredients: r.ingredients.map(i => ({ ...i })) })}
+                    <button className="btn" onClick={() => setEditingRecipe({ ...r, ingredients: processIngredientsForEdit(r.ingredients.map(i => ({ ...i, qty: i.qty || 0, unit: i.unit || "", customUnit: "" }))) })}
                       style={{ background: "#1e2a3a", color: "#5c9fe0", padding: "5px 11px", fontSize: 10 }}>
                       Edit
                     </button>
@@ -529,7 +714,7 @@ return (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                   {r.ingredients.map((ing, idx) => {
                     const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
-                    return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name} · {ing.qty}</span>;
+                    return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name} · {ing.qty}{ing.unit ? ` ${ing.unit}` : ""}</span>;
                   })}
                 </div>
               </div>
@@ -543,21 +728,24 @@ return (
   {/* ── Shopping View ── */}
   {view === "shopping" && (
     <div style={{ padding: "14px" }} className="fadeIn">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8 }}>
+        <button className="btn" onClick={() => setShowAddShoppingItem(true)} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>+ Custom item</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, justifyContent: "flex-end" }}>
+          <div className="dm" style={{ fontSize: 11, color: "#555" }}>{shoppingList.filter(i => !i.checked).length} of {shoppingList.length} remaining</div>
+          {shoppingList.some(i => i.checked) && (
+            <button className="btn" onClick={() => setShoppingList(prev => prev.map(i => ({ ...i, checked: false })))}
+              style={{ background: "#1e1c18", color: "#888", padding: "5px 12px", fontSize: 10 }}>
+              Uncheck all
+            </button>
+          )}
+        </div>
+      </div>
       {shoppingList.length === 0 ? (
         <div className="dm" style={{ textAlign: "center", padding: 48, color: "#444" }}>No items yet — plan meals first</div>
       ) : (
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div className="dm" style={{ fontSize: 11, color: "#555" }}>{shoppingList.filter(i => !i.checked).length} of {shoppingList.length} remaining</div>
-            {shoppingList.some(i => i.checked) && (
-              <button className="btn" onClick={() => setShoppingList(prev => prev.map(i => ({ ...i, checked: false })))}
-                style={{ background: "#1e1c18", color: "#888", padding: "5px 12px", fontSize: 10 }}>
-                Uncheck all
-              </button>
-            )}
-          </div>
           {STORES.map(store => {
-            const items = shoppingList.filter(i => i.store === store);
+            const items = shoppingList.filter(i => (i.tempStore || i.store) === store);
             if (!items.length) return null;
             const sc = STORE_COLORS[store];
             const remaining = items.filter(i => !i.checked).length;
@@ -576,7 +764,38 @@ return (
                       </div>
                       <div style={{ flex: 1 }}>
                         <div className="dm" style={{ fontSize: 14, fontWeight: 500, textDecoration: item.checked ? "line-through" : "none" }}>{item.name}</div>
-                        <div className="dm" style={{ fontSize: 11, color: "#555" }}>{item.qty}</div>
+                        <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                          <div className="dm" style={{ fontSize: 11, color: "#555" }}>{consolidateQuantities(item.quantities)}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#12100e", borderRadius: 12, padding: "6px 8px" }} onClick={e => e.stopPropagation()}>
+                            <input type="number" min="0" value={item.pantryQty || ""} onChange={e => {
+                              const value = e.target.value;
+                              setShoppingList(prev => prev.map(i => i.id === item.id ? { ...i, pantryQty: value === "" ? 0 : parseFloat(value) } : i));
+                            }} placeholder="Pantry" style={{ width: 70, background: "transparent", border: "1px solid #333", color: "#fff", borderRadius: 8, padding: "4px 6px" }} />
+                            <span className="dm" style={{ fontSize: 11, color: "#aaa" }}>in pantry</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#12100e", borderRadius: 12, padding: "6px 8px" }} onClick={e => e.stopPropagation()}>
+                            <select value={item.tempStore || item.store} onChange={e => {
+                              const nextStore = e.target.value;
+                              setShoppingList(prev => prev.map(i => {
+                                if (i.id !== item.id) return i;
+                                return { ...i, tempStore: nextStore === i.store ? null : nextStore };
+                              }));
+                            }} style={{ background: "transparent", color: "#fff", border: "1px solid #333", borderRadius: 8, padding: "4px 6px", minWidth: 110 }}>
+                              {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        {(() => {
+                          const totals = getQuantitySummary(item.quantities);
+                          if (totals.length === 1) {
+                            const total = totals[0];
+                            const pantry = parseFloat(item.pantryQty) || 0;
+                            const remaining = Math.max(total.qty - pantry, 0);
+                            const remainingDisplay = Number.isInteger(remaining) ? remaining : parseFloat(remaining.toFixed(2));
+                            return <div className="dm" style={{ fontSize: 11, color: "#8bc34a", marginTop: 4 }}>Need {remainingDisplay} {total.unit}</div>;
+                          }
+                          return null;
+                        })()}
                       </div>
                       <button onClick={e => { e.stopPropagation(); removeItem(item.id); }}
                         style={{ background: "none", border: "none", color: "#333", fontSize: 20, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
@@ -588,6 +807,40 @@ return (
           })}
         </>
       )}
+    </div>
+  )}
+
+  {showAddShoppingItem && (
+    <div className="overlay" onClick={() => setShowAddShoppingItem(false)}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>Add custom item</h2>
+          <button onClick={() => setShowAddShoppingItem(false)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Item name</div>
+          <input value={newShoppingItem.name} onChange={e => setNewShoppingItem(prev => ({ ...prev, name: e.target.value }))} placeholder="e.g. Bananas" style={{ width: "100%" }} />
+        </div>
+        <div style={{ marginBottom: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div>
+            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Quantity</div>
+            <input type="number" value={newShoppingItem.qty} onChange={e => setNewShoppingItem(prev => ({ ...prev, qty: e.target.value }))} placeholder="Qty" style={{ width: "100%" }} />
+          </div>
+          <div>
+            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Unit</div>
+            <input value={newShoppingItem.unit} onChange={e => setNewShoppingItem(prev => ({ ...prev, unit: e.target.value }))} placeholder="e.g. kg, cans" style={{ width: "100%" }} />
+          </div>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Store</div>
+          <select value={newShoppingItem.store} onChange={e => setNewShoppingItem(prev => ({ ...prev, store: e.target.value }))} style={{ width: "100%" }}>
+            {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <button className="btn" onClick={addShoppingItem} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
+          Add item
+        </button>
+      </div>
     </div>
   )}
 
@@ -695,7 +948,7 @@ return (
           <button onClick={() => setPickerFor(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
         </div>
         {week[pickerFor.day]?.[pickerFor.mealType]?.mealId && (
-          <button className="btn" onClick={() => setMeal(pickerFor.day, pickerFor.mealType, null)}
+          <button className="btn" onClick={() => { setMeal(pickerFor.day, pickerFor.mealType, null); setPickerLeftovers(false); }}
             style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 10 }}>
             Remove meal
           </button>
@@ -703,10 +956,17 @@ return (
         {recipes.filter(r => r.type === pickerFor.mealType).map(r => {
           const active = week[pickerFor.day]?.[pickerFor.mealType]?.mealId === r.id;
           return (
-            <div key={r.id} onClick={() => setMeal(pickerFor.day, pickerFor.mealType, r.id)}
-              style={{ padding: "13px 15px", borderRadius: 12, marginBottom: 7, cursor: "pointer", background: active ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${active ? "#c8a96e" : "#252320"}` }}>
-              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{r.name}</div>
-              <div className="dm" style={{ fontSize: 11, color: "#555" }}>{r.ingredients.slice(0, 3).map(i => i.name).join(", ")}{r.ingredients.length > 3 ? "..." : ""}</div>
+            <div key={r.id} style={{ padding: "13px 15px", borderRadius: 12, marginBottom: 7, background: active ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${active ? "#c8a96e" : "#252320"}` }}>
+              <div onClick={() => setMeal(pickerFor.day, pickerFor.mealType, r.id, pickerLeftovers)} style={{ cursor: "pointer" }}>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{r.name}</div>
+                <div className="dm" style={{ fontSize: 11, color: "#555" }}>{r.ingredients.slice(0, 3).map(i => i.name).join(", ")}{r.ingredients.length > 3 ? "..." : ""}</div>
+              </div>
+              {active && (
+                <div style={{ marginTop: 8, display: "flex", alignItems: "center" }}>
+                  <input type="checkbox" checked={pickerLeftovers} onChange={e => setPickerLeftovers(e.target.checked)} style={{ marginRight: 8 }} />
+                  <label style={{ fontSize: 12, color: "#888" }}>Make leftovers for tomorrow's lunch</label>
+                </div>
+              )}
             </div>
           );
         })}
