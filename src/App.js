@@ -869,12 +869,23 @@ return (
                   const pantryQty = parseFloat(item.pantryQty) || 0;
                   const pantryUnit = item.pantryUnit || (item.quantities?.[0]?.unit || "");
                   const toBuy = Array.isArray(totals) ? totals.filter(t => t && typeof t.qty === 'number' && t.unit).map(t => {
-                    let left = t.qty;
-                    if (pantryUnit && pantryUnit === t.unit && !isNaN(pantryQty) && pantryQty > 0) {
-                      left = Math.max(t.qty - pantryQty, 0);
-                    }
-                    return { qty: parseFloat(left.toFixed(2)), unit: t.unit };
-                  }).filter(t => t.qty > 0) : [];
+  let left = t.qty;
+  if (!isNaN(pantryQty) && pantryQty > 0 && pantryUnit) {
+    const base1 = pantryUnit === 'kg' || pantryUnit === 'g' ? 'g' : pantryUnit === 'L' || pantryUnit === 'ml' ? 'ml' : null;
+    const base2 = t.unit === 'kg' || t.unit === 'g' ? 'g' : t.unit === 'L' || t.unit === 'ml' ? 'ml' : null;
+    if (base1 && base2 && base1 === base2) {
+      const pantryInBase = pantryQty * (UNIT_CONVERSIONS[pantryUnit]?.[base1] || 1);
+      const needInBase = t.qty * (UNIT_CONVERSIONS[t.unit]?.[base2] || 1);
+      const leftInBase = Math.max(needInBase - pantryInBase, 0);
+      const displayUnit = leftInBase >= 1000 ? (base1 === 'g' ? 'kg' : 'L') : base1;
+      const displayQty = leftInBase >= 1000 ? leftInBase / 1000 : leftInBase;
+      return { qty: parseFloat(displayQty.toFixed(2)), unit: displayUnit };
+    } else if (pantryUnit === t.unit) {
+      left = Math.max(t.qty - pantryQty, 0);
+    }
+  }
+  return { qty: parseFloat(left.toFixed(2)), unit: t.unit };
+}).filter(t => t.qty > 0) : [];
                   const toBuyText = toBuy.length > 0 ? toBuy.map(t => `${t.qty} ${t.unit}`).join(", ") : consolidateQuantities(item.quantities);
 
                   return (
