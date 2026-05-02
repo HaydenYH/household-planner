@@ -205,7 +205,7 @@ const DEFAULT_RECIPES = [
     { name: "Rice", qty: 300, unit: "g", store: "Woolworths" },
     { name: "Black Beans", qty: 150, unit: "g", store: "Aldi" },
     { name: "Corn", qty: 167, unit: "g", store: "Aldi" },
-    { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Aldi" },
+    { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Woolworths" },
     { name: "Cherry Tomatoes", qty: 167, unit: "g", store: "Woolworths" },
   ]},
 ];
@@ -282,6 +282,38 @@ return [state, setAndSave, synced];
 function RecipeForm({ initial, onSave, onClose, title }) {
 const [draft, setDraft] = useState(initial);
 const valid = draft.name.trim().length > 0;
+const allIngredientNames = useMemo(() => {
+  const names = new Set();
+  recipes.forEach(r => r.ingredients.forEach(i => { if (i.name.trim()) names.add(i.name.trim()); }));
+  return [...names].sort();
+}, [recipes]);
+
+function IngredientAutocomplete({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const matches = value.trim().length > 0
+    ? allIngredientNames.filter(n => n.toLowerCase().includes(value.toLowerCase()) && n.toLowerCase() !== value.toLowerCase())
+    : [];
+  return (
+    <div style={{ position: "relative", flex: 1 }}>
+      <input value={value} onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onFocus={() => setOpen(true)}
+        placeholder="Ingredient" style={{ width: "100%" }} />
+      {open && matches.length > 0 && (
+        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#1e1c18", border: "1px solid #2a2824", borderRadius: 8, zIndex: 100, maxHeight: 140, overflowY: "auto", marginTop: 2 }}>
+          {matches.slice(0, 6).map(name => (
+            <div key={name} onMouseDown={() => { onChange(name); setOpen(false); }}
+              style={{ padding: "8px 12px", cursor: "pointer", fontSize: 13, fontFamily: "DM Sans, sans-serif", color: "#ede8d8", borderBottom: "1px solid #252320" }}
+              onMouseEnter={e => e.target.style.background = "#2a2824"}
+              onMouseLeave={e => e.target.style.background = "transparent"}>
+              {name}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function toggleType(mt) {
   const current = draft.types || [];
@@ -331,7 +363,7 @@ return (
   {draft.ingredients.map((ing, idx) => (
     <div key={idx} style={{ marginBottom: 12, padding: "10px", background: "#0c0c0a", borderRadius: 8, border: "1px solid #252320" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: ing.unit === "custom" ? 8 : 0 }}>
-        <input value={ing.name} onChange={e => updateIng(idx, "name", e.target.value)} placeholder="Ingredient" style={{ flex: 1 }} />
+        <IngredientAutocomplete value={ing.name} onChange={val => updateIng(idx, "name", val)} />
         <input type="number" value={ing.qty} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 60 }} />
         <select value={ing.unit} onChange={e => updateIng(idx, "unit", e.target.value)} style={{ width: 80 }}>
           <option value="">None</option>
@@ -557,6 +589,28 @@ const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d
 const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
 
+function similarItems(a, b) {
+  const s1 = a.toLowerCase().replace(/[^a-z]/g, "");
+  const s2 = b.toLowerCase().replace(/[^a-z]/g, "");
+  if (s1 === s2) return false; // exact same key, already consolidated
+  if (s1.includes(s2) || s2.includes(s1)) return true;
+  // Simple character overlap check
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  let matches = 0;
+  for (const c of shorter) { if (longer.includes(c)) matches++; }
+  return shorter.length > 4 && matches / shorter.length > 0.85;
+}
+
+const shoppingWarnings = [];
+for (let i = 0; i < safeShoppingList.length; i++) {
+  for (let j = i + 1; j < safeShoppingList.length; j++) {
+    if (similarItems(safeShoppingList[i].name, safeShoppingList[j].name)) {
+      shoppingWarnings.push({ a: safeShoppingList[i].name, b: safeShoppingList[j].name });
+    }
+  }
+}
+
 // ── Render ─────────────────────────────────────────────────────────────────
 return (
 <div style={{ fontFamily: "'Playfair Display', Georgia, serif", background: "#0c0c0a", minHeight: "100vh", color: "#ede8d8", maxWidth: 480, margin: "0 auto", paddingBottom: 84 }}>
@@ -763,6 +817,16 @@ return (
         )}
       </div>
     </div>
+    {shoppingWarnings.length > 0 && (
+  <div style={{ background: "#2a1f0a", border: "1px solid #ff980055", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+    <div className="dm" style={{ fontSize: 12, color: "#ff9800", fontWeight: 700, marginBottom: 6 }}>⚠️ Possible duplicate ingredients</div>
+    {shoppingWarnings.map((w, i) => (
+      <div key={i} className="dm" style={{ fontSize: 11, color: "#aaa", marginBottom: 3 }}>
+        <span style={{ color: "#ff9800" }}>{w.a}</span> and <span style={{ color: "#ff9800" }}>{w.b}</span> may be the same item
+      </div>
+    ))}
+  </div>
+)}
     {safeShoppingList.length === 0 ? (
       <div className="dm" style={{ textAlign: "center", padding: 48, color: "#444" }}>No items yet — plan meals first</div>
     ) : (
