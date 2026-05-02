@@ -590,16 +590,13 @@ const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
 
 function similarItems(a, b) {
-  const s1 = a.toLowerCase().replace(/[^a-z]/g, "");
-  const s2 = b.toLowerCase().replace(/[^a-z]/g, "");
-  if (s1 === s2) return false; // exact same key, already consolidated
-  if (s1.includes(s2) || s2.includes(s1)) return true;
-  // Simple character overlap check
-  const longer = s1.length > s2.length ? s1 : s2;
-  const shorter = s1.length > s2.length ? s2 : s1;
-  let matches = 0;
-  for (const c of shorter) { if (longer.includes(c)) matches++; }
-  return shorter.length > 4 && matches / shorter.length > 0.85;
+  const stopWords = new Set(["the", "a", "an", "and", "or", "of", "in", "with", "low", "high", "light", "dark", "fresh", "frozen", "raw", "cooked", "whole", "brown", "black", "green", "red", "white"]);
+  const words1 = a.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
+  const words2 = b.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
+  if (words1.length === 0 || words2.length === 0) return false;
+  const shared = words1.filter(w => words2.includes(w));
+  // Only flag if they share a meaningful word AND both have it as a key word
+  return shared.length >= 1 && shared.some(w => w.length >= 5);
 }
 
 const shoppingWarnings = [];
