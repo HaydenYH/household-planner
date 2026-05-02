@@ -98,6 +98,12 @@ Costco:     { bg: "#3a1a1a", accent: "#f44336", light: "#f4433622" },
 Market:     { bg: "#2a1f0a", accent: "#ff9800", light: "#ff980022" },
 };
 
+const MEAL_ICONS = {
+  Breakfast: "☀️",
+  Lunch: "🥪",
+  Dinner: "🍽️",
+};
+
 const UNIT_CONVERSIONS = {
   g: { kg: 0.001, g: 1 },
   kg: { g: 1000, kg: 1 },
