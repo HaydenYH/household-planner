@@ -114,7 +114,8 @@ const UNIT_CONVERSIONS = {
 function consolidateQuantities(quantities) {
   const compatible = {};
   const incompatible = {};
-  for (const { qty, unit } of quantities) {
+  const list = Array.isArray(quantities) ? quantities : [];
+  for (const { qty, unit } of list) {
     if (unit in UNIT_CONVERSIONS) {
       const base = unit === 'g' || unit === 'kg' ? 'g' : 'ml';
       const converted = qty * (UNIT_CONVERSIONS[unit][base] || 1);
@@ -140,7 +141,8 @@ function consolidateQuantities(quantities) {
 function getQuantitySummary(quantities) {
   const compatible = {};
   const incompatible = {};
-  for (const { qty, unit } of quantities) {
+  const list = Array.isArray(quantities) ? quantities : [];
+  for (const { qty, unit } of list) {
     if (unit in UNIT_CONVERSIONS) {
       const base = unit === 'g' || unit === 'kg' ? 'g' : 'ml';
       const converted = qty * (UNIT_CONVERSIONS[unit][base] || 1);
@@ -405,11 +407,11 @@ setSelectedDay(0);
 }
 
 function toggleCheck(itemId) {
-setShoppingList(prev => prev.map(item => item.id === itemId ? { ...item, checked: !item.checked } : item));
+setShoppingList(prev => Array.isArray(prev) ? prev.map(item => item.id === itemId ? { ...item, checked: !item.checked } : item) : []);
 }
 
 function removeItem(itemId) {
-setShoppingList(prev => prev.filter(item => item.id !== itemId));
+setShoppingList(prev => Array.isArray(prev) ? prev.filter(item => item.id !== itemId) : []);
 }
 
 function addShoppingItem() {
@@ -417,7 +419,7 @@ const name = newShoppingItem.name.trim();
 const qty = parseFloat(newShoppingItem.qty) || 0;
 if (!name || qty <= 0) return;
 setShoppingList(prev => [
-  ...prev,
+  ...(Array.isArray(prev) ? prev : []),
   {
     id: `custom-${Date.now()}-${Math.round(Math.random() * 1000)}`,
     name,
@@ -545,6 +547,7 @@ setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId)
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
 const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
+const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
 
 // ── Render ─────────────────────────────────────────────────────────────────
 return (
@@ -737,21 +740,21 @@ return (
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8 }}>
         <button className="btn" onClick={() => setShowAddShoppingItem(true)} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>+ Custom item</button>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, justifyContent: "flex-end" }}>
-          <div className="dm" style={{ fontSize: 11, color: "#555" }}>{shoppingList.filter(i => !i.checked).length} of {shoppingList.length} remaining</div>
-          {shoppingList.some(i => i.checked) && (
-            <button className="btn" onClick={() => setShoppingList(prev => prev.map(i => ({ ...i, checked: false })))}
+          <div className="dm" style={{ fontSize: 11, color: "#555" }}>{safeShoppingList.filter(i => !i.checked).length} of {safeShoppingList.length} remaining</div>
+          {safeShoppingList.some(i => i.checked) && (
+            <button className="btn" onClick={() => setShoppingList(prev => Array.isArray(prev) ? prev.map(i => ({ ...i, checked: false })) : [])}
               style={{ background: "#1e1c18", color: "#888", padding: "5px 12px", fontSize: 10 }}>
               Uncheck all
             </button>
           )}
         </div>
       </div>
-      {shoppingList.length === 0 ? (
+      {safeShoppingList.length === 0 ? (
         <div className="dm" style={{ textAlign: "center", padding: 48, color: "#444" }}>No items yet — plan meals first</div>
       ) : (
         <>
           {STORES.map(store => {
-            const items = shoppingList.filter(i => (i.tempStore || i.store) === store);
+            const items = safeShoppingList.filter(i => (i.tempStore || i.store) === store);
             if (!items.length) return null;
             const sc = STORE_COLORS[store];
             const remaining = items.filter(i => !i.checked).length;
@@ -775,17 +778,17 @@ return (
                           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#12100e", borderRadius: 12, padding: "6px 8px" }} onClick={e => e.stopPropagation()}>
                             <input type="number" min="0" value={item.pantryQty || ""} onChange={e => {
                               const value = e.target.value;
-                              setShoppingList(prev => prev.map(i => i.id === item.id ? { ...i, pantryQty: value === "" ? 0 : parseFloat(value) } : i));
+                              setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryQty: value === "" ? 0 : parseFloat(value) } : i) : []);
                             }} placeholder="Pantry" style={{ width: 70, background: "transparent", border: "1px solid #333", color: "#fff", borderRadius: 8, padding: "4px 6px" }} />
                             <span className="dm" style={{ fontSize: 11, color: "#aaa" }}>in pantry</span>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#12100e", borderRadius: 12, padding: "6px 8px" }} onClick={e => e.stopPropagation()}>
                             <select value={item.tempStore || item.store} onChange={e => {
                               const nextStore = e.target.value;
-                              setShoppingList(prev => prev.map(i => {
+                              setShoppingList(prev => Array.isArray(prev) ? prev.map(i => {
                                 if (i.id !== item.id) return i;
                                 return { ...i, tempStore: nextStore === i.store ? null : nextStore };
-                              }));
+                              }) : []);
                             }} style={{ background: "transparent", color: "#fff", border: "1px solid #333", borderRadius: 8, padding: "4px 6px", minWidth: 110 }}>
                               {STORES.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
