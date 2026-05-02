@@ -391,7 +391,8 @@ const [showAddRecipe, setShowAddRecipe] = useState(false);
 const [editingRecipe, setEditingRecipe] = useState(null); // recipe object
 const [showAddShoppingItem, setShowAddShoppingItem] = useState(false);
 const [newShoppingItem, setNewShoppingItem] = useState({ name: "", qty: "", unit: "", store: "Woolworths" });
-const [newGoalMember, setNewGoalMember] = useState(null); // member name
+const [compactShopping, setCompactShopping] = useState(false);
+const [newGoalMember, setNewGoalMember] = useState(null);
 const [newGoalText, setNewGoalText] = useState("");
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
@@ -744,126 +745,129 @@ return (
 )}
 
   {/* ── Shopping View ── */}
-  {view === "shopping" && (
-    <div style={{ padding: "14px" }} className="fadeIn">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8 }}>
-        <button className="btn" onClick={() => setShowAddShoppingItem(true)} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>+ Custom item</button>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, justifyContent: "flex-end" }}>
-          <div className="dm" style={{ fontSize: 11, color: "#555" }}>{safeShoppingList.filter(i => !i.checked).length} of {safeShoppingList.length} remaining</div>
-          {safeShoppingList.some(i => i.checked) && (
-            <button className="btn" onClick={() => setShoppingList(prev => Array.isArray(prev) ? prev.map(i => ({ ...i, checked: false })) : [])}
-              style={{ background: "#1e1c18", color: "#888", padding: "5px 12px", fontSize: 10 }}>
-              Uncheck all
-            </button>
-          )}
-        </div>
+{view === "shopping" && (
+  <div style={{ padding: "14px" }} className="fadeIn">
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8 }}>
+      <button className="btn" onClick={() => setShowAddShoppingItem(true)} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>+ Custom item</button>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button className="btn" onClick={() => setCompactShopping(p => !p)}
+          style={{ background: compactShopping ? "#c8a96e22" : "#1e1c18", color: compactShopping ? "#c8a96e" : "#888", padding: "7px 12px", border: `1px solid ${compactShopping ? "#c8a96e55" : "transparent"}` }}>
+          {compactShopping ? "⊞ Full" : "⊟ Compact"}
+        </button>
+        <div className="dm" style={{ fontSize: 11, color: "#555" }}>{safeShoppingList.filter(i => !i.checked).length} of {safeShoppingList.length} remaining</div>
+        {safeShoppingList.some(i => i.checked) && (
+          <button className="btn" onClick={() => setShoppingList(prev => Array.isArray(prev) ? prev.map(i => ({ ...i, checked: false })) : [])}
+            style={{ background: "#1e1c18", color: "#888", padding: "5px 12px", fontSize: 10 }}>
+            Uncheck all
+          </button>
+        )}
       </div>
-      {safeShoppingList.length === 0 ? (
-        <div className="dm" style={{ textAlign: "center", padding: 48, color: "#444" }}>No items yet — plan meals first</div>
-      ) : (
-        <>
-          {STORES.map(store => {
-            const items = safeShoppingList.filter(i => (i.tempStore || i.store) === store);
-            if (!items.length) return null;
-            const sc = STORE_COLORS[store];
-            const remaining = items.filter(i => !i.checked).length;
-            return (
-              <div key={store} style={{ marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, background: sc.bg, borderRadius: 12, padding: "10px 14px", marginBottom: 6, border: `1px solid ${sc.accent}33` }}>
-                  <span className="dm" style={{ fontWeight: 700, fontSize: 13, color: sc.accent, flex: 1 }}>{store}</span>
-                  <span className="dm" style={{ fontSize: 11, color: sc.accent, opacity: .6 }}>{remaining === 0 ? "✓ done" : `${remaining} left`}</span>
-                </div>
-                <div style={{ background: "#161512", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
-                  {items.map((item, idx) => (
-                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderBottom: idx < items.length - 1 ? "1px solid #1a1814" : "none", opacity: item.checked ? .35 : 1, transition: "opacity .2s", cursor: "pointer" }}
-                      onClick={() => toggleCheck(item.id)}>
-                      <div className="check-box" style={{ border: `2px solid ${item.checked ? sc.accent : "#333"}`, background: item.checked ? sc.accent : "transparent" }}>
-                        {item.checked && <svg width="12" height="9" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="#0c0c0a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                      </div>
-<div style={{ flex: 1 }}>
-  <div className="dm" style={{ fontSize: 14, fontWeight: 600, textDecoration: item.checked ? "line-through" : "none", marginBottom: 6 }}>{item.name}</div>
-  
-  {/* Big "need" amount */}
-  <div className="dm" style={{ fontSize: 20, fontWeight: 700, color: "#c8a96e", marginBottom: 8 }}>
-    {consolidateQuantities(item.quantities)}
-  </div>
-
-  {/* Pantry row — compact */}
-  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={e => e.stopPropagation()}>
-      <span className="dm" style={{ fontSize: 10, color: "#555" }}>In pantry:</span>
-      <input type="number" min="0" value={item.pantryQty || ""} onChange={e => {
-        const value = e.target.value;
-        setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryQty: value === "" ? 0 : parseFloat(value) } : i) : []);
-      }} placeholder="0" style={{ width: 44, background: "#1a1814", border: "1px solid #2a2824", color: "#aaa", borderRadius: 6, padding: "3px 6px", fontSize: 11 }} />
-      <select value={item.pantryUnit || (item.quantities?.[0]?.unit || "")} onChange={e => {
-        setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryUnit: e.target.value } : i) : []);
-      }} style={{ background: "#1a1814", color: "#aaa", border: "1px solid #2a2824", borderRadius: 6, padding: "3px 5px", fontSize: 11 }}>
-        <option value="">—</option>
-        <option value="g">g</option>
-        <option value="kg">kg</option>
-        <option value="ml">ml</option>
-        <option value="L">L</option>
-        <option value="cups">cups</option>
-        <option value="tbsp">tbsp</option>
-        <option value="tsp">tsp</option>
-        <option value="cans">cans</option>
-        <option value="packets">packets</option>
-        <option value="slices">slices</option>
-      </select>
     </div>
+    {safeShoppingList.length === 0 ? (
+      <div className="dm" style={{ textAlign: "center", padding: 48, color: "#444" }}>No items yet — plan meals first</div>
+    ) : (
+      <>
+        {STORES.map(store => {
+          const items = safeShoppingList.filter(i => (i.tempStore || i.store) === store);
+          if (!items.length) return null;
+          const sc = STORE_COLORS[store];
+          const remaining = items.filter(i => !i.checked).length;
+          return (
+            <div key={store} style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: sc.bg, borderRadius: 12, padding: "10px 14px", marginBottom: 6, border: `1px solid ${sc.accent}33` }}>
+                <span className="dm" style={{ fontWeight: 700, fontSize: 13, color: sc.accent, flex: 1 }}>{store}</span>
+                <span className="dm" style={{ fontSize: 11, color: sc.accent, opacity: .6 }}>{remaining === 0 ? "✓ done" : `${remaining} left`}</span>
+              </div>
+              <div style={{ background: "#161512", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
+                {items.map((item, idx) => {
+                  // Calculate how much to buy after pantry
+                  const totals = getQuantitySummary(item.quantities);
+                  const pantryQty = parseFloat(item.pantryQty) || 0;
+                  const pantryUnit = item.pantryUnit || (item.quantities?.[0]?.unit || "");
+                  const toBuy = Array.isArray(totals) ? totals.map(t => {
+                    let left = t.qty;
+                    if (pantryUnit && pantryUnit === t.unit && pantryQty > 0) {
+                      left = Math.max(t.qty - pantryQty, 0);
+                    }
+                    return { qty: parseFloat(left.toFixed(2)), unit: t.unit };
+                  }).filter(t => t.qty > 0) : [];
+                  const toBuyText = toBuy.length > 0 ? toBuy.map(t => `${t.qty} ${t.unit}`).join(", ") : consolidateQuantities(item.quantities);
 
-    {/* Still need */}
-    {(() => {
-      const totals = getQuantitySummary(item.quantities);
-      if (!Array.isArray(totals) || totals.length === 0) return null;
-      const pantryQty = parseFloat(item.pantryQty) || 0;
-      const pantryUnit = item.pantryUnit || (item.quantities?.[0]?.unit || "");
-      const stillNeeded = totals.map(t => {
-        let left = t.qty;
-        if (pantryUnit && pantryUnit === t.unit && pantryQty > 0) {
-          left = Math.max(t.qty - pantryQty, 0);
-        }
-        return { qty: parseFloat(left.toFixed(2)), unit: t.unit };
-      }).filter(t => t.qty > 0);
-      if (stillNeeded.length === 0 || pantryQty === 0) return null;
-      return (
-        <span className="dm" style={{ fontSize: 11, color: "#8bc34a", fontWeight: 600 }}>
-          → buy {stillNeeded.map(r => `${r.qty} ${r.unit}`).join(", ")}
-        </span>
-      );
-    })()}
-  </div>
+                  return (
+                    <div key={item.id} style={{ borderBottom: idx < items.length - 1 ? "1px solid #1a1814" : "none" }}>
+                      {/* ── Main row — always visible ── */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}
+                        onClick={() => toggleCheck(item.id)}>
+                        <div className="check-box" style={{ border: `2px solid ${item.checked ? sc.accent : "#333"}`, background: item.checked ? sc.accent : "transparent", flexShrink: 0 }}>
+                          {item.checked && <svg width="12" height="9" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="#0c0c0a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </div>
+                        <div className="dm" style={{ flex: 1, fontSize: 14, fontWeight: 600, textDecoration: item.checked ? "line-through" : "none", opacity: item.checked ? 0.4 : 1 }}>{item.name}</div>
+                        <div className="dm" style={{ fontSize: 18, fontWeight: 700, color: item.checked ? "#555" : "#c8a96e", textDecoration: item.checked ? "line-through" : "none" }}>{toBuyText}</div>
+                        {!compactShopping && (
+                          <button onClick={e => { e.stopPropagation(); removeItem(item.id); }}
+                            style={{ background: "none", border: "none", color: "#333", fontSize: 20, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
+                        )}
+                      </div>
 
-  {/* Store override — compact */}
-  <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 5 }} onClick={e => e.stopPropagation()}>
-    <span className="dm" style={{ fontSize: 10, color: "#555" }}>Store:</span>
-    <select value={item.tempStore || item.store} onChange={e => {
-      const nextStore = e.target.value;
-      setShoppingList(prev => Array.isArray(prev) ? prev.map(i => {
-        if (i.id !== item.id) return i;
-        return { ...i, tempStore: nextStore === i.store ? null : nextStore };
-      }) : []);
-    }} style={{ background: "#1a1814", color: item.tempStore && item.tempStore !== item.store ? "#c8a96e" : "#aaa", border: "1px solid #2a2824", borderRadius: 6, padding: "3px 6px", fontSize: 11 }}>
-      {STORES.map(s => <option key={s} value={s}>{s}</option>)}
-    </select>
-    {item.tempStore && item.tempStore !== item.store && (
-      <span className="dm" style={{ fontSize: 9, color: "#c8a96e" }}>(override)</span>
+                      {/* ── Expanded row — hidden in compact mode ── */}
+                      {!compactShopping && (
+                        <div style={{ padding: "0 14px 11px 46px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}
+                          onClick={e => e.stopPropagation()}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <span className="dm" style={{ fontSize: 10, color: "#555" }}>In pantry:</span>
+                            <input type="number" min="0" value={item.pantryQty || ""} onChange={e => {
+                              const value = e.target.value;
+                              setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryQty: value === "" ? 0 : parseFloat(value) } : i) : []);
+                            }} placeholder="0" style={{ width: 44, background: "#1a1814", border: "1px solid #2a2824", color: "#aaa", borderRadius: 6, padding: "3px 6px", fontSize: 11 }} />
+                            <select value={item.pantryUnit || (item.quantities?.[0]?.unit || "")} onChange={e => {
+                              setShoppingList(prev => Array.isArray(prev) ? prev.map(i => i.id === item.id ? { ...i, pantryUnit: e.target.value } : i) : []);
+                            }} style={{ background: "#1a1814", color: "#aaa", border: "1px solid #2a2824", borderRadius: 6, padding: "3px 5px", fontSize: 11 }}>
+                              <option value="">—</option>
+                              <option value="g">g</option>
+                              <option value="kg">kg</option>
+                              <option value="ml">ml</option>
+                              <option value="L">L</option>
+                              <option value="cups">cups</option>
+                              <option value="tbsp">tbsp</option>
+                              <option value="tsp">tsp</option>
+                              <option value="cans">cans</option>
+                              <option value="packets">packets</option>
+                              <option value="slices">slices</option>
+                              <option value="whole">whole</option>
+                              <option value="scoops">scoops</option>
+                            </select>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <span className="dm" style={{ fontSize: 10, color: "#555" }}>Store:</span>
+                            <select value={item.tempStore || item.store} onChange={e => {
+                              const nextStore = e.target.value;
+                              setShoppingList(prev => Array.isArray(prev) ? prev.map(i => {
+                                if (i.id !== item.id) return i;
+                                return { ...i, tempStore: nextStore === i.store ? null : nextStore };
+                              }) : []);
+                            }} style={{ background: "#1a1814", color: item.tempStore && item.tempStore !== item.store ? "#c8a96e" : "#aaa", border: "1px solid #2a2824", borderRadius: 6, padding: "3px 6px", fontSize: 11 }}>
+                              {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                            {item.tempStore && item.tempStore !== item.store && (
+                              <span className="dm" style={{ fontSize: 9, color: "#c8a96e" }}>(override)</span>
+                            )}
+                          </div>
+                          <button onClick={e => { e.stopPropagation(); removeItem(item.id); }}
+                            style={{ background: "none", border: "none", color: "#444", fontSize: 11, cursor: "pointer", padding: "2px 6px", fontFamily: "DM Sans, sans-serif" }}>remove</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </>
     )}
   </div>
-</div>
-                      <button onClick={e => { e.stopPropagation(); removeItem(item.id); }}
-                        style={{ background: "none", border: "none", color: "#333", fontSize: 20, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </>
-      )}
-    </div>
-  )}
+)}
+
 
   {showAddShoppingItem && (
     <div className="overlay" onClick={() => setShowAddShoppingItem(false)}>
