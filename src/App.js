@@ -811,16 +811,18 @@ return (
                         </div>
                         {(() => {
                           const totals = getQuantitySummary(item.quantities);
+                          if (!Array.isArray(totals) || totals.length === 0) return null;
                           const pantryQty = parseFloat(item.pantryQty) || 0;
                           const pantryUnit = item.pantryUnit || (item.quantities?.[0]?.unit || "");
-                          const remaining = totals.map(t => {
+                          const remaining = totals.filter(t => t && typeof t.qty === "number" && t.unit).map(t => {
                             let leftover = t.qty;
-                            if (pantryUnit && pantryUnit === t.unit) {
+                            if (pantryUnit && pantryUnit === t.unit && !isNaN(pantryQty)) {
                               leftover = Math.max(t.qty - pantryQty, 0);
                             }
                             const display = Number.isInteger(leftover) ? leftover : parseFloat(leftover.toFixed(2));
                             return { qty: display, unit: t.unit };
                           });
+                          if (remaining.length === 0) return null;
                           const remainingText = remaining.map(r => `${r.qty} ${r.unit}`).join(", ");
                           return <div className="dm" style={{ fontSize: 11, color: "#8bc34a", marginTop: 4, fontWeight: 500 }}>🛒 {remainingText}</div>;
                         })()}
