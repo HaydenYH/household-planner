@@ -115,59 +115,60 @@ function consolidateQuantities(quantities) {
   const compatible = {};
   const incompatible = {};
   const list = Array.isArray(quantities) ? quantities : [];
-  for (const { qty, unit } of list) {
-    const numQty = parseFloat(qty);
-    if (isNaN(numQty) || numQty <= 0) continue;
-    const cleanUnit = unit || "";
-    if (cleanUnit in UNIT_CONVERSIONS) {
-      const base = cleanUnit === "g" || cleanUnit === "kg" ? "g" : "ml";
-      const converted = numQty * (UNIT_CONVERSIONS[cleanUnit][base] || 1);
+  for (const item of list) {
+    if (!item || typeof item !== 'object') continue;
+    const qty = parseFloat(item.qty);
+    const unit = String(item.unit || '').trim();
+    if (isNaN(qty) || qty <= 0) continue;
+    if (unit in UNIT_CONVERSIONS) {
+      const base = unit === 'g' || unit === 'kg' ? 'g' : 'ml';
+      const converted = qty * (UNIT_CONVERSIONS[unit][base] || 1);
       if (!compatible[base]) compatible[base] = 0;
       compatible[base] += converted;
-    } else {
-      if (!incompatible[cleanUnit]) incompatible[cleanUnit] = 0;
-      incompatible[cleanUnit] += numQty;
+    } else if (unit) {
+      if (!incompatible[unit]) incompatible[unit] = 0;
+      incompatible[unit] += qty;
     }
   }
   const parts = [];
   for (const [base, total] of Object.entries(compatible)) {
-    const displayUnit = total >= 1000 && base === "g" ? "kg" : total >= 1000 && base === "ml" ? "L" : base;
-    const displayQty = displayUnit === "kg" || displayUnit === "L" ? total / 1000 : total;
-    parts.push(`${parseFloat(displayQty.toFixed(2))} ${displayUnit}`);
+    const displayUnit = total >= 1000 && base === 'g' ? 'kg' : total >= 1000 && base === 'ml' ? 'L' : base;
+    const displayQty = displayUnit === 'kg' || displayUnit === 'L' ? total / 1000 : total;
+    if (!isNaN(displayQty) && displayQty > 0) parts.push(`${parseFloat(displayQty.toFixed(2))} ${displayUnit}`);
   }
   for (const [unit, qty] of Object.entries(incompatible)) {
-    if (unit) parts.push(`${parseFloat(qty.toFixed(2))} ${unit}`);
-    else parts.push(`${parseFloat(qty.toFixed(2))}`);
+    if (unit && !isNaN(qty) && qty > 0) parts.push(`${parseFloat(qty.toFixed(2))} ${unit}`);
   }
-  return parts.length > 0 ? parts.join(", ") : "—";
+  return parts.length > 0 ? parts.join(', ') : '—';
 }
 
 function getQuantitySummary(quantities) {
   const compatible = {};
   const incompatible = {};
   const list = Array.isArray(quantities) ? quantities : [];
-  for (const { qty, unit } of list) {
-    const numQty = parseFloat(qty);
-    if (isNaN(numQty) || numQty <= 0) continue;
-    const cleanUnit = unit || "";
-    if (cleanUnit in UNIT_CONVERSIONS) {
-      const base = cleanUnit === "g" || cleanUnit === "kg" ? "g" : "ml";
-      const converted = numQty * (UNIT_CONVERSIONS[cleanUnit][base] || 1);
+  for (const item of list) {
+    if (!item || typeof item !== 'object') continue;
+    const qty = parseFloat(item.qty);
+    const unit = String(item.unit || '').trim();
+    if (isNaN(qty) || qty <= 0) continue;
+    if (unit in UNIT_CONVERSIONS) {
+      const base = unit === 'g' || unit === 'kg' ? 'g' : 'ml';
+      const converted = qty * (UNIT_CONVERSIONS[unit][base] || 1);
       if (!compatible[base]) compatible[base] = 0;
       compatible[base] += converted;
-    } else {
-      if (!incompatible[cleanUnit]) incompatible[cleanUnit] = 0;
-      incompatible[cleanUnit] += numQty;
+    } else if (unit) {
+      if (!incompatible[unit]) incompatible[unit] = 0;
+      incompatible[unit] += qty;
     }
   }
   const totals = [];
   for (const [base, total] of Object.entries(compatible)) {
-    const displayUnit = total >= 1000 && base === "g" ? "kg" : total >= 1000 && base === "ml" ? "L" : base;
-    const displayQty = displayUnit === "kg" || displayUnit === "L" ? total / 1000 : total;
-    totals.push({ qty: parseFloat(displayQty.toFixed(2)), unit: displayUnit });
+    const displayUnit = total >= 1000 && base === 'g' ? 'kg' : total >= 1000 && base === 'ml' ? 'L' : base;
+    const displayQty = displayUnit === 'kg' || displayUnit === 'L' ? total / 1000 : total;
+    if (!isNaN(displayQty) && displayQty > 0) totals.push({ qty: parseFloat(displayQty.toFixed(2)), unit: displayUnit });
   }
   for (const [unit, qty] of Object.entries(incompatible)) {
-    totals.push({ qty: parseFloat(qty.toFixed(2)), unit });
+    if (unit && !isNaN(qty) && qty > 0) totals.push({ qty: parseFloat(qty.toFixed(2)), unit });
   }
   return totals;
 }
@@ -279,34 +280,42 @@ return [state, setAndSave, synced];
 }
 
 // ── Ingredient editor (shared by add + edit modals) ───────────────────────────
-function RecipeForm({ initial, onSave, onClose, title, recipes }) {
-const [draft, setDraft] = useState(initial);
-const valid = draft.name.trim().length > 0;
-const allIngredientNames = useMemo(() => {
-  const names = new Set();
-  recipes.forEach(r => r.ingredients.forEach(i => { if (i.name.trim()) names.add(i.name.trim()); }));
-  return [...names].sort();
-}, [recipes]);
-
-function IngredientAutocomplete({ value, onChange }) {
+function IngredientAutocomplete({ value, onChange, onSelectFull, recipes }) {
   const [open, setOpen] = useState(false);
+  const allIngredients = useMemo(() => {
+    const seen = new Map();
+    (recipes || []).forEach(r => r.ingredients.forEach(i => {
+      if (i.name.trim() && !seen.has(i.name.toLowerCase())) {
+        seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: i.unit });
+      }
+    }));
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [recipes]);
+
   const matches = value.trim().length > 0
-    ? allIngredientNames.filter(n => n.toLowerCase().includes(value.toLowerCase()) && n.toLowerCase() !== value.toLowerCase())
+    ? allIngredients.filter(n => n.name.toLowerCase().includes(value.toLowerCase()) && n.name.toLowerCase() !== value.toLowerCase())
     : [];
+
   return (
     <div style={{ position: "relative", flex: 1 }}>
-      <input value={value} onChange={e => { onChange(e.target.value); setOpen(true); }}
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         onFocus={() => setOpen(true)}
-        placeholder="Ingredient" style={{ width: "100%" }} />
+        placeholder="Ingredient"
+        style={{ width: "100%" }}
+      />
       {open && matches.length > 0 && (
         <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#1e1c18", border: "1px solid #2a2824", borderRadius: 8, zIndex: 100, maxHeight: 140, overflowY: "auto", marginTop: 2 }}>
-          {matches.slice(0, 6).map(name => (
-            <div key={name} onMouseDown={() => { onChange(name); setOpen(false); }}
+          {matches.slice(0, 6).map(item => (
+            <div key={item.name}
+              onMouseDown={() => { onSelectFull(item); setOpen(false); }}
               style={{ padding: "8px 12px", cursor: "pointer", fontSize: 13, fontFamily: "DM Sans, sans-serif", color: "#ede8d8", borderBottom: "1px solid #252320" }}
-              onMouseEnter={e => e.target.style.background = "#2a2824"}
-              onMouseLeave={e => e.target.style.background = "transparent"}>
-              {name}
+              onMouseEnter={e => e.currentTarget.style.background = "#2a2824"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              <span>{item.name}</span>
+              <span className="dm" style={{ fontSize: 10, color: "#555", marginLeft: 8 }}>{item.store}</span>
             </div>
           ))}
         </div>
@@ -314,6 +323,11 @@ function IngredientAutocomplete({ value, onChange }) {
     </div>
   );
 }
+
+
+function RecipeForm({ initial, onSave, onClose, title, recipes }) {
+const [draft, setDraft] = useState(initial);
+const valid = draft.name.trim().length > 0;
 
 function toggleType(mt) {
   const current = draft.types || [];
@@ -845,9 +859,9 @@ return (
                   const totals = getQuantitySummary(item.quantities);
                   const pantryQty = parseFloat(item.pantryQty) || 0;
                   const pantryUnit = item.pantryUnit || (item.quantities?.[0]?.unit || "");
-                  const toBuy = Array.isArray(totals) ? totals.map(t => {
+                  const toBuy = Array.isArray(totals) ? totals.filter(t => t && typeof t.qty === 'number' && t.unit).map(t => {
                     let left = t.qty;
-                    if (pantryUnit && pantryUnit === t.unit && pantryQty > 0) {
+                    if (pantryUnit && pantryUnit === t.unit && !isNaN(pantryQty) && pantryQty > 0) {
                       left = Math.max(t.qty - pantryQty, 0);
                     }
                     return { qty: parseFloat(left.toFixed(2)), unit: t.unit };
