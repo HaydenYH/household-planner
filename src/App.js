@@ -315,7 +315,7 @@ function IngredientAutocomplete({ value, onChange, onSelectFull, recipes }) {
               onMouseEnter={e => e.currentTarget.style.background = "#2a2824"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               <span>{item.name}</span>
-              <span className="dm" style={{ fontSize: 10, color: "#555", marginLeft: 8 }}>{item.store}</span>
+              <span className="dm" style={{ fontSize: 10, color: "#c8a96e88", marginLeft: 8 }}>→ {item.store}</span>
             </div>
           ))}
         </div>
@@ -377,7 +377,16 @@ return (
   {draft.ingredients.map((ing, idx) => (
     <div key={idx} style={{ marginBottom: 12, padding: "10px", background: "#0c0c0a", borderRadius: 8, border: "1px solid #252320" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: ing.unit === "custom" ? 8 : 0 }}>
-        <IngredientAutocomplete value={ing.name} onChange={val => updateIng(idx, "name", val)} />
+        <IngredientAutocomplete
+  value={ing.name}
+  onChange={val => updateIng(idx, "name", val)}
+  onSelectFull={item => {
+    const a = [...draft.ingredients];
+    a[idx] = { ...a[idx], name: item.name, store: item.store || a[idx].store };
+    setDraft(p => ({ ...p, ingredients: a }));
+  }}
+  recipes={recipes}
+/>
         <input type="number" value={ing.qty} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 60 }} />
         <select value={ing.unit} onChange={e => updateIng(idx, "unit", e.target.value)} style={{ width: 80 }}>
           <option value="">None</option>
