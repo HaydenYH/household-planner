@@ -473,6 +473,11 @@ setWeek(prev => {
   return newWeek;
 });
 setPickerFor(null);
+setTimeout(() => {
+  if (safeShoppingList.length > 0) {
+    generateShoppingList(false);
+  }
+}, 100);
 }
 
 function changeWeek(offset) {
@@ -609,14 +614,6 @@ setGoals(prev => ({
 function deleteGoal(member, goalId) {
 setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId) }));
 }
-
-const prevWeekRef = useRef(null);
-useEffect(() => {
-  if (prevWeekRef.current && safeShoppingList.length > 0) {
-    generateShoppingList(false);
-  }
-  prevWeekRef.current = week;
-}, [week]);
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
 const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
