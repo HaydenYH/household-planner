@@ -174,7 +174,7 @@ function getQuantitySummary(quantities) {
 
 const DEFAULT_RECIPES = [
   { id: 1, name: "Banana Overnight Oats", types: ["Breakfast"], serves: 3, ingredients: [
-    { name: "Light Greek Yoghurt", qty: 240, unit: "g", store: "Woolworths" },
+    { name: "Light Greek Yoghurt", qty: 240, unit: "g", store: "Aldi" },
     { name: "Rolled Oats", qty: 75, unit: "g", store: "Woolworths" },
     { name: "Black Chia Seeds", qty: 30, unit: "g", store: "Costco" },
     { name: "Chocolate Protein Powder", qty: 3, unit: "scoops", store: "Costco" },
@@ -205,7 +205,7 @@ const DEFAULT_RECIPES = [
     { name: "Rice", qty: 300, unit: "g", store: "Woolworths" },
     { name: "Black Beans", qty: 150, unit: "g", store: "Aldi" },
     { name: "Corn", qty: 167, unit: "g", store: "Aldi" },
-    { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Woolworths" },
+    { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Aldi" },
     { name: "Cherry Tomatoes", qty: 167, unit: "g", store: "Woolworths" },
   ]},
 ];
@@ -279,7 +279,7 @@ return [state, setAndSave, synced];
 }
 
 // ── Ingredient editor (shared by add + edit modals) ───────────────────────────
-function RecipeForm({ initial, onSave, onClose, title }) {
+function RecipeForm({ initial, onSave, onClose, title, recipes }) {
 const [draft, setDraft] = useState(initial);
 const valid = draft.name.trim().length > 0;
 const allIngredientNames = useMemo(() => {
@@ -1118,11 +1118,12 @@ return (
   {showAddRecipe && (
     <div className="overlay" onClick={() => setShowAddRecipe(false)}>
       <RecipeForm
-        title="New Recipe"
-        initial={{ name: "", types: ["Dinner"], serves: 4, ingredients: [{ name: "", qty: "", store: "Woolworths" }] }}
-        onSave={saveNewRecipe}
-        onClose={() => setShowAddRecipe(false)}
-      />
+  title="New Recipe"
+  recipes={recipes}
+  initial={{ name: "", types: ["Dinner"], serves: 4, ingredients: [{ name: "", qty: 0, unit: "", store: "Woolworths", customUnit: "" }] }}
+  onSave={saveNewRecipe}
+  onClose={() => setShowAddRecipe(false)}
+/>
     </div>
   )}
 
@@ -1130,11 +1131,12 @@ return (
   {editingRecipe && (
     <div className="overlay" onClick={() => setEditingRecipe(null)}>
       <RecipeForm
-        title={`Edit: ${editingRecipe.name}`}
-        initial={editingRecipe}
-        onSave={saveEditedRecipe}
-        onClose={() => setEditingRecipe(null)}
-      />
+  title={`Edit: ${editingRecipe.name}`}
+  recipes={recipes}
+  initial={editingRecipe}
+  onSave={saveEditedRecipe}
+  onClose={() => setEditingRecipe(null)}
+/>
     </div>
   )}
 
