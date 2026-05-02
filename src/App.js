@@ -470,7 +470,7 @@ function setMeal(day, mealType, recipeId, leftovers = false) {
       newWeek[nextDay] = { ...newWeek[nextDay], Lunch: { ...newWeek[nextDay].Lunch, mealId: recipeId, leftovers: true } };
     }
     if (safeShoppingList.length > 0) {
-      const updatedList = buildShoppingListFromWeek(newWeek);
+      const updatedList = buildShoppingListFromWeek(newWeek, recipes);
       setShoppingList(updatedList);
     }
     return newWeek;
@@ -511,13 +511,13 @@ setShowAddShoppingItem(false);
 setNewShoppingItem({ name: "", qty: "", unit: "", store: "Woolworths" });
 }
 
-function buildShoppingListFromWeek(currentWeek) {
+function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
   const consolidated = {};
   DAYS.forEach(day => {
     MEAL_TYPES.forEach(mealType => {
       const slot = currentWeek[day]?.[mealType];
       if (!slot?.mealId || !slot.attending?.length) return;
-      const recipe = recipes.find(r => r.id === slot.mealId);
+      const recipe = currentRecipes.find(r => r.id === slot.mealId);
       if (!recipe) return;
       if (slot.leftovers) return;
       const serves = recipe.serves || 1;
@@ -679,7 +679,7 @@ return (
         {DAYS.map((d, i) => (
           <button key={d} className={`day-tab ${selectedDay === i ? "active" : "inactive"}`} onClick={() => setSelectedDay(i)}>
             <div>{d}</div>
-            <div style={{ fontSize: 10, opacity: .7 }}>{weekStart.getDate() + i}</div>
+            <div style={{ fontSize: 10, opacity: .7 }}>{addDays(weekStart, i).getDate()}</div>
           </button>
         ))}
       </div>
@@ -697,7 +697,7 @@ return (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div>
                 <span style={{ fontWeight: 700, fontSize: 15 }}>{FULL_DAYS[di]}</span>
-                <span className="dm" style={{ fontSize: 12, color: "#555", marginLeft: 8 }}>{weekStart.getDate() + di} {weekStart.toLocaleDateString("en-AU", { month: "short" })}</span>
+                <span className="dm" style={{ fontSize: 12, color: "#555", marginLeft: 8 }}>{addDays(weekStart, di).getDate()} {addDays(weekStart, di).toLocaleDateString("en-AU", { month: "short" })}</span>
               </div>
               <span className="dm" style={{ fontSize: 11, color: "#555" }}>{MEAL_TYPES.filter(m => dayData[m]?.mealId).length}/3</span>
             </div>
