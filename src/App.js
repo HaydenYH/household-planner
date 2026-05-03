@@ -509,7 +509,6 @@ function mergeGeneratedShoppingList(generated, existing = []) {
   if (generated.length === 0) return customItems;
   return result;
 }
-}
 
 // ── Meal actions ──────────────────────────────────────────────────────────
 function toggleAttending(day, mealType, member) {
