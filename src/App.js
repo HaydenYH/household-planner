@@ -455,6 +455,8 @@ const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
 const shoppingListRef = useRef(safeShoppingList);
 useEffect(() => { shoppingListRef.current = safeShoppingList; }, [safeShoppingList]);
+const recipesRef = useRef(recipes);
+useEffect(() => { recipesRef.current = recipes; }, [recipes]);
 
 // ── Meal actions ──────────────────────────────────────────────────────────
 function toggleAttending(day, mealType, member) {
@@ -472,10 +474,7 @@ function setMeal(day, mealType, recipeId, leftovers = false) {
       const nextDay = DAYS[(dayIndex + 1) % 7];
       newWeek[nextDay] = { ...newWeek[nextDay], Lunch: { ...newWeek[nextDay].Lunch, mealId: recipeId, leftovers: true } };
     }
-     if (shoppingListRef.current.length > 0) {
-      const updatedList = buildShoppingListFromWeek(newWeek, recipes);
-      setShoppingList(updatedList);
-    }
+    
     return newWeek;
   });
   setPickerFor(null);
@@ -615,6 +614,13 @@ setGoals(prev => ({
 function deleteGoal(member, goalId) {
 setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId) }));
 }
+useEffect(() => {
+  if (!weekReady) return;
+  if (shoppingListRef.current.length > 0) {
+    const updated = buildShoppingListFromWeek(week, recipesRef.current);
+    setShoppingList(updated);
+  }
+}, [week]);
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
 const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
