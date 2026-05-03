@@ -531,11 +531,19 @@ return { ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], a
 
 function setMeal(day, mealType, recipeId, leftovers = false) {
   setWeek(prev => {
+    const current = prev[day][mealType];
     const newWeek = { ...prev, [day]: { ...prev[day], [mealType]: { ...prev[day][mealType], mealId: recipeId, leftovers } } };
-    if (leftovers && mealType !== "Lunch") {
+    if (leftovers && mealType !== "Lunch" && recipeId) {
       const dayIndex = DAYS.indexOf(day);
       const nextDay = DAYS[(dayIndex + 1) % 7];
       newWeek[nextDay] = { ...newWeek[nextDay], Lunch: { ...newWeek[nextDay].Lunch, mealId: recipeId, leftovers: true } };
+    } else if (!leftovers && current.leftovers && mealType !== "Lunch") {
+      const dayIndex = DAYS.indexOf(day);
+      const nextDay = DAYS[(dayIndex + 1) % 7];
+      const nextLunch = newWeek[nextDay]?.Lunch;
+      if (nextLunch?.mealId === current.mealId && nextLunch?.leftovers) {
+        newWeek[nextDay] = { ...newWeek[nextDay], Lunch: { ...newWeek[nextDay].Lunch, mealId: null, leftovers: false } };
+      }
     }
 
     const list = buildShoppingListFromWeek(newWeek, recipesRef.current);
@@ -586,7 +594,7 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
       if (!slot?.mealId || !slot.attending?.length) return;
       const recipe = currentRecipes.find(r => r.id === slot.mealId);
       if (!recipe) return;
-      if (slot.leftovers) return;
+      if (slot.leftovers && mealType === "Lunch") return;
       const serves = recipe.serves || 1;
       let totalAttendees = slot.attending.length;
       DAYS.forEach(d => {
