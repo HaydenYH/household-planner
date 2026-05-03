@@ -1707,8 +1707,8 @@ return (
               setNewIngredient(p => ({ ...p, _lookingUp: false }));
               alert("Lookup failed — please fill in macros manually.");
             }
-          }} style={{ width: "100%", marginBottom: 12, padding: "10px", background: newIngredient._lookingUp ? "#1e2a1e" : "#1a2a1a", color: newIngredient._lookingUp ? "#4caf50" : "#4caf50", border: "1px solid #4caf5044" }}>
-            {newIngredient._lookingUp ? "⏳ Looking up..." : "✨ Look up with Claude"}
+          }} style={{ width: "100%", marginBottom: 12, padding: "10px", background: "#1a1814", color: "#444", cursor: "not-allowed", border: "1px solid #4caf5044" }}>
+            {newIngredient._lookingUp ? "⏳ Looking up..." : "✨ Look up with Claude (No credits available"}
           </button>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
             {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
