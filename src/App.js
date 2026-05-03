@@ -452,6 +452,7 @@ const [newGoalMember, setNewGoalMember] = useState(null);
 const [newGoalText, setNewGoalText] = useState("");
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
+const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
 
 // ── Meal actions ──────────────────────────────────────────────────────────
 function toggleAttending(day, mealType, member) {
@@ -615,7 +616,6 @@ setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId)
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
 const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
-const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
 
 function similarItems(a, b) {
   const stopWords = new Set(["the", "a", "an", "and", "or", "of", "in", "with", "low", "high", "light", "dark", "fresh", "frozen", "raw", "cooked", "whole", "brown", "black", "green", "red", "white"]);
