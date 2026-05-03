@@ -176,8 +176,6 @@ function calcMacrosForRecipe(recipe) {
   });
   if (!hasAny) return null;
   return { cal: Math.round(cal), carbs: Math.round(carbs), fat: Math.round(fat), protein: Math.round(protein), fibre: Math.round(fibre), sugar: Math.round(sugar) };
-}function getMacros(name) {
-  return MACRO_DB[name.toLowerCase()] || null;
 }
 
 const GRAMS_PER_UNIT = {
