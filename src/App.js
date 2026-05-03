@@ -495,6 +495,9 @@ const [newIngredient, setNewIngredient] = useState({ name: "", store: "Woolworth
 const [activeUser, setActiveUser] = useState(null);
 const [snackPickerFor, setSnackPickerFor] = useState(null);
 const [snackSearch, setSnackSearch] = useState("");
+const [selectedSnackIng, setSelectedSnackIng] = useState(null);
+const [snackQty, setSnackQty] = useState(1);
+const [snackUnit, setSnackUnit] = useState("");
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
@@ -1478,7 +1481,7 @@ return (
       <div className="sheet" onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: 18 }}>🍎 {snackPickerFor.member}'s Snack</h2>
-          <button onClick={() => setSnackPickerFor(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
+          <button onClick={() => { setSnackPickerFor(null); setSelectedSnackIng(null); }} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
         </div>
         {(() => {
           const snackKey = `snack_${snackPickerFor.member}`;
@@ -1525,23 +1528,57 @@ return (
                     const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
                     const isSelected = currentSnackRecipe?.name === ing.name;
                     return (
-                      <div key={ing.name} onClick={() => {
-                        const snackId = `snack-ing-${ing.name.toLowerCase().replace(/\s+/g, "-")}`;
-                        const allIngs = [];
-                        recipes.forEach(r => r.ingredients.forEach(i => { if (i.name.toLowerCase() === ing.name.toLowerCase() && r.id !== snackId) allIngs.push(i); }));
-                        const matched = allIngs[0];
-                        const unit = matched?.unit || ing.unit || "whole";
-                        const snackRecipeObj = { id: snackId, name: ing.name, types: ["Snack"], serves: 1, ingredients: [{ name: ing.name, qty: 1, unit, store: ing.store, category: ing.category || guessCategory(ing.name) }] };
-                        setRecipes(prev => {
-                          const exists = prev.find(r => r.id === snackId);
-                          if (exists) return prev.map(r => r.id === snackId ? snackRecipeObj : r);
-                          return [...prev, snackRecipeObj];
-                        });
-                        setWeek(prev => ({ ...prev, [snackPickerFor.day]: { ...prev[snackPickerFor.day], [snackKey]: { mealId: snackId } } }));
-                        setSnackPickerFor(null);
-                      }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: isSelected ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${isSelected ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
-                        <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
-                        <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                      <div key={ing.name}>
+                        <div onClick={() => {
+                          const allIngs = [];
+                          const snackId = `snack-ing-${ing.name.toLowerCase().replace(/\s+/g, "-")}`;
+                          recipes.forEach(r => r.ingredients.forEach(i => { if (i.name.toLowerCase() === ing.name.toLowerCase() && r.id !== snackId) allIngs.push(i); }));
+                          const matched = allIngs[0];
+                          const unit = matched?.unit || ing.unit || "whole";
+                          setSelectedSnackIng({ ...ing, unit });
+                          setSnackQty(1);
+                          setSnackUnit(unit);
+                        }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: selectedSnackIng?.name === ing.name ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${selectedSnackIng?.name === ing.name ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
+                          <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
+                          <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                        </div>
+                        {selectedSnackIng?.name === ing.name && (
+                          <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
+                            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>How much?</div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                              <input type="number" value={snackQty} onChange={e => setSnackQty(parseFloat(e.target.value) || 1)}
+                                style={{ width: 70 }} min="0.1" step="0.5" />
+                              <select value={snackUnit} onChange={e => setSnackUnit(e.target.value)} style={{ flex: 1 }}>
+                                <option value="whole">whole</option>
+                                <option value="g">g</option>
+                                <option value="kg">kg</option>
+                                <option value="ml">ml</option>
+                                <option value="L">L</option>
+                                <option value="cups">cups</option>
+                                <option value="tbsp">tbsp</option>
+                                <option value="tsp">tsp</option>
+                                <option value="cans">cans</option>
+                                <option value="scoops">scoops</option>
+                                <option value="slices">slices</option>
+                                <option value="packets">packets</option>
+                              </select>
+                            </div>
+                            <button className="btn" onClick={() => {
+                              const snackId = `snack-ing-${ing.name.toLowerCase().replace(/\s+/g, "-")}`;
+                              const snackRecipeObj = { id: snackId, name: ing.name, types: ["Snack"], serves: 1, ingredients: [{ name: ing.name, qty: snackQty, unit: snackUnit, store: ing.store, category: ing.category || guessCategory(ing.name) }] };
+                              setRecipes(prev => {
+                                const exists = prev.find(r => r.id === snackId);
+                                if (exists) return prev.map(r => r.id === snackId ? snackRecipeObj : r);
+                                return [...prev, snackRecipeObj];
+                              });
+                              setWeek(prev => ({ ...prev, [snackPickerFor.day]: { ...prev[snackPickerFor.day], [snackKey]: { mealId: snackId } } }));
+                              setSelectedSnackIng(null);
+                              setSnackPickerFor(null);
+                            }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", width: "100%" }}>
+                              Add Snack
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
