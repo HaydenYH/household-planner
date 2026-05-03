@@ -176,6 +176,59 @@ function calcMacrosForRecipe(recipe) {
   });
   if (!hasAny) return null;
   return { cal: Math.round(cal), carbs: Math.round(carbs), fat: Math.round(fat), protein: Math.round(protein), fibre: Math.round(fibre), sugar: Math.round(sugar) };
+}function getMacros(name) {
+  return MACRO_DB[name.toLowerCase()] || null;
+}
+
+const GRAMS_PER_UNIT = {
+  "banana":              { whole: 120 },
+  "brown onion":         { whole: 150 },
+  "broccolini":          { whole: 200 },
+  "lebanese cucumber":   { whole: 200 },
+  "high protein pasta":  { packet: 500 },
+  "chocolate protein powder": { scoops: 30 },
+  "green pesto":         { jar: 190 },
+  "green curry paste":   { jar: 114 },
+  "coconut milk":        { cans: 400 },
+  "egg":                 { whole: 60 },
+};
+
+function getGramsForUnit(name, unit, qty) {
+  const n = name.toLowerCase();
+  if (unit === "g") return qty;
+  if (unit === "kg") return qty * 1000;
+  if (unit === "ml") return qty;
+  if (unit === "L") return qty * 1000;
+  if (unit === "tbsp") return qty * 15;
+  if (unit === "tsp") return qty * 5;
+  if (unit === "cups") return qty * 240;
+  const custom = GRAMS_PER_UNIT[n]?.[unit];
+  if (custom) return qty * custom;
+  return null;
+}
+
+function calcMacrosForRecipe(recipe) {
+  let cal = 0, carbs = 0, fat = 0, protein = 0, fibre = 0, sugar = 0;
+  let hasAny = false;
+  (recipe.ingredients || []).forEach(ing => {
+    const m = getMacros(ing.name);
+    if (!m) return;
+    const qty = parseFloat(ing.qty) || 0;
+    const unit = ing.unit || "";
+    const grams = getGramsForUnit(ing.name, unit, qty);
+    if (grams !== null) {
+      const scale = grams / 100;
+      cal += m.cal * scale;
+      carbs += m.carbs * scale;
+      fat += m.fat * scale;
+      protein += m.protein * scale;
+      fibre += m.fibre * scale;
+      sugar += m.sugar * scale;
+      hasAny = true;
+    }
+  });
+  if (!hasAny) return null;
+  return { cal: Math.round(cal), carbs: Math.round(carbs), fat: Math.round(fat), protein: Math.round(protein), fibre: Math.round(fibre), sugar: Math.round(sugar) };
 }
 
 function guessCategory(name) {
@@ -561,6 +614,7 @@ const [snackSearch, setSnackSearch] = useState("");
 const [selectedSnackIng, setSelectedSnackIng] = useState(null);
 const [snackQty, setSnackQty] = useState(1);
 const [snackUnit, setSnackUnit] = useState("");
+const [ingredientMacroPopup, setIngredientMacroPopup] = useState(null);
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
@@ -1010,7 +1064,8 @@ return (
           totalSugar += perServe.sugar;
           hasMacros = true;
         });
-        MEMBERS.forEach(member => {
+        const snackMembers = activeUser ? [activeUser] : MEMBERS;
+        snackMembers.forEach(member => {
           const snackKey = `snack_${member}`;
           const slot = week[DAYS[selectedDay]]?.[snackKey];
           if (!slot?.mealId) return;
@@ -1135,9 +1190,13 @@ return (
                 {allIngredients.filter(i => i.category === cat).sort((a,b) => a.name.localeCompare(b.name)).map((ing, idx, arr) => {
                   const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
                   return (
-                    <div key={ing.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none" }}>
+                    <div key={ing.name} onClick={() => { const m = getMacros(ing.name); if (m) setIngredientMacroPopup({ name: ing.name, ...m }); }}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none", cursor: getMacros(ing.name) ? "pointer" : "default" }}>
                       <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
-                      <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {getMacros(ing.name) && <span className="dm" style={{ fontSize: 10, color: "#c8a96e" }}>{getMacros(ing.name).cal} cal</span>}
+                        <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                      </div>
                     </div>
                   );
                 })}
@@ -1645,6 +1704,38 @@ return (
         }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
           Save Ingredient
         </button>
+      </div>
+    </div>
+  )}
+  {/* ── Ingredient Macro Popup ── */}
+  {ingredientMacroPopup && (
+    <div className="overlay" onClick={() => setIngredientMacroPopup(null)}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>{ingredientMacroPopup.name}</h2>
+          <button onClick={() => setIngredientMacroPopup(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
+        </div>
+        <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 16 }}>
+          <span style={{ fontSize: 32, fontWeight: 700, color: "#c8a96e", fontFamily: "DM Sans, sans-serif" }}>{ingredientMacroPopup.cal}</span>
+          <span className="dm" style={{ fontSize: 13, color: "#555" }}>calories</span>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+          {[["Protein", ingredientMacroPopup.protein, "#5c9fe0"], ["Carbs", ingredientMacroPopup.carbs, "#c8a96e"], ["Fat", ingredientMacroPopup.fat, "#a78bca"]].map(([label, val, color]) => (
+            <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 12, padding: "12px 10px", border: `1px solid ${color}33` }}>
+              <div className="dm" style={{ fontSize: 20, fontWeight: 700, color }}>{val}g</div>
+              <div className="dm" style={{ fontSize: 11, color: "#555" }}>{label}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {[["Fibre", ingredientMacroPopup.fibre], ["Sugar", ingredientMacroPopup.sugar]].map(([label, val]) => (
+            <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 12, padding: "10px", border: "1px solid #252320" }}>
+              <div className="dm" style={{ fontSize: 16, fontWeight: 600, color: "#666" }}>{val}g</div>
+              <div className="dm" style={{ fontSize: 11, color: "#444" }}>{label}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )}
