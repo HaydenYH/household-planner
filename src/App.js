@@ -401,17 +401,19 @@ return (
   <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Ingredients</div>
   {draft.ingredients.map((ing, idx) => (
     <div key={idx} style={{ marginBottom: 12, padding: "10px", background: "#0c0c0a", borderRadius: 8, border: "1px solid #252320" }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: ing.unit === "custom" ? 8 : 0 }}>
+      <div style={{ marginBottom: 8 }}>
         <IngredientAutocomplete
   value={ing.name}
   onChange={val => updateIng(idx, "name", val)}
-onSelectFull={item => {
+  onSelectFull={item => {
     const a = [...draft.ingredients];
     a[idx] = { ...a[idx], name: item.name, store: item.store || a[idx].store, category: item.category || guessCategory(item.name) };
     setDraft(p => ({ ...p, ingredients: a }));
   }}
   recipes={recipes}
 />
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <input type="number" value={ing.qty} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 60 }} />
         <select value={ing.unit} onChange={e => updateIng(idx, "unit", e.target.value)} style={{ width: 80 }}>
           <option value="">None</option>
