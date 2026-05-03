@@ -300,7 +300,7 @@ return [state, setAndSave, synced];
 }
 
 // ── Ingredient editor (shared by add + edit modals) ───────────────────────────
-function IngredientAutocomplete({ value, onChange, onSelectFull, recipes }) {
+function IngredientAutocomplete({ value, onChange, onSelectFull, recipes, extraIngredients = [] }) {
   const [open, setOpen] = useState(false);
   const allIngredients = useMemo(() => {
     const seen = new Map();
@@ -309,8 +309,13 @@ function IngredientAutocomplete({ value, onChange, onSelectFull, recipes }) {
         seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: i.unit, category: i.category || guessCategory(i.name) });
       }
     }));
+    (extraIngredients || []).forEach(i => {
+      if (i.name.trim() && !seen.has(i.name.toLowerCase())) {
+        seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: "", category: i.category || guessCategory(i.name) });
+      }
+    });
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [recipes]);
+  }, [recipes, extraIngredients]);
 
   const matches = value.trim().length > 0
     ? allIngredients.filter(n => n.name.toLowerCase().includes(value.toLowerCase()) && n.name.toLowerCase() !== value.toLowerCase())
@@ -1290,8 +1295,25 @@ return (
         </div>
         <div style={{ marginBottom: 12 }}>
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Name</div>
-          <input value={newIngredient.name} onChange={e => setNewIngredient(p => ({ ...p, name: e.target.value, category: guessCategory(e.target.value) }))}
-            placeholder="e.g. Olive Oil" style={{ width: "100%" }} autoFocus />
+          <IngredientAutocomplete
+            value={newIngredient.name}
+            onChange={val => setNewIngredient(p => ({ ...p, name: val, category: guessCategory(val) }))}
+            onSelectFull={item => setNewIngredient(p => ({ ...p, name: item.name, store: item.store || p.store, category: item.category || guessCategory(item.name) }))}
+            recipes={recipes}
+            extraIngredients={standaloneIngredients || []}
+          />
+          {(() => {
+            const n = newIngredient.name.trim().toLowerCase();
+            if (!n) return null;
+            const inRecipes = recipes.some(r => r.ingredients.some(i => i.name.toLowerCase() === n));
+            const inStandalone = (standaloneIngredients || []).some(i => i.name.toLowerCase() === n);
+            if (inRecipes || inStandalone) return (
+              <div className="dm" style={{ fontSize: 11, color: "#ff9800", marginTop: 6 }}>
+                ⚠️ This ingredient already exists in your database
+              </div>
+            );
+            return null;
+          })()}
         </div>
         <div style={{ marginBottom: 12 }}>
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Store</div>
