@@ -115,6 +115,69 @@ const CATEGORY_ICONS = {
   "Other": "📦",
 };
 
+const MACRO_DB = {
+  "light greek yoghurt":      { cal: 74,  carbs: 7.5,  fat: 2.5,  protein: 6.3,  fibre: 0,   sugar: 5 },
+  "rolled oats":              { cal: 388, carbs: 52,   fat: 12,   protein: 12,   fibre: 8,   sugar: 4 },
+  "black chia seeds":         { cal: 360, carbs: 10,   fat: 20,   protein: 30,   fibre: 34,  sugar: 0 },
+  "chocolate protein powder": { cal: 395, carbs: 10,   fat: 3.3,  protein: 79,   fibre: 0,   sugar: 3.3 },
+  "almond milk":              { cal: 16,  carbs: 1,    fat: 2,    protein: 1,    fibre: 0,   sugar: 0 },
+  "banana":                   { cal: 110, carbs: 27.5, fat: 0,    protein: 0.5,  fibre: 2.6, sugar: 10.5 },
+  "frozen blueberries":       { cal: 40,  carbs: 10,   fat: 0,    protein: 0,    fibre: 2.4, sugar: 10 },
+  "brown onion":              { cal: 40,  carbs: 8,    fat: 0,    protein: 0.4,  fibre: 1.4, sugar: 0 },
+  "green pesto":              { cal: 360, carbs: 7.2,  fat: 34.9, protein: 2.2,  fibre: 0,   sugar: 0 },
+  "light thickened cream":    { cal: 335, carbs: 3,    fat: 35.3, protein: 2.3,  fibre: 0,   sugar: 0 },
+  "bacon":                    { cal: 91,  carbs: 0.7,  fat: 5.7,  protein: 9.3,  fibre: 0,   sugar: 0 },
+  "broccolini":               { cal: 35,  carbs: 0,    fat: 0,    protein: 3.9,  fibre: 2.8, sugar: 0 },
+  "high protein pasta":       { cal: 363, carbs: 55,   fat: 4.5,  protein: 21.5, fibre: 4,   sugar: 0 },
+  "chicken breast":           { cal: 106, carbs: 0,    fat: 2.5,  protein: 26.5, fibre: 0,   sugar: 0 },
+  "green curry paste":        { cal: 108, carbs: 7.9,  fat: 7.9,  protein: 0.9,  fibre: 0,   sugar: 0 },
+  "brown sugar":              { cal: 300, carbs: 80,   fat: 0,    protein: 0,    fibre: 0,   sugar: 80 },
+  "green beans":              { cal: 31,  carbs: 7.2,  fat: 0,    protein: 1.9,  fibre: 2.7, sugar: 0 },
+  "low carb potato":          { cal: 45,  carbs: 9.1,  fat: 0,    protein: 2.4,  fibre: 1.8, sugar: 0 },
+  "coconut milk":             { cal: 36,  carbs: 0.2,  fat: 3.4,  protein: 0.4,  fibre: 0,   sugar: 0 },
+  "lebanese cucumber":        { cal: 16,  carbs: 2.5,  fat: 0.1,  protein: 0.6,  fibre: 0.5, sugar: 0 },
+  "rice":                     { cal: 113, carbs: 25,   fat: 0.5,  protein: 1.9,  fibre: 0.3, sugar: 0 },
+  "black beans":              { cal: 111, carbs: 15.8, fat: 0.7,  protein: 7.8,  fibre: 8.7, sugar: 0 },
+  "corn":                     { cal: 77,  carbs: 13.5, fat: 1.6,  protein: 2,    fibre: 2,   sugar: 0 },
+  "cherry tomatoes":          { cal: 18,  carbs: 4,    fat: 0,    protein: 0,    fibre: 1.2, sugar: 0 },
+  "beef mince":               { cal: 174, carbs: 0.5,  fat: 8,    protein: 21.9, fibre: 0,   sugar: 0 },
+  "egg":                      { cal: 140, carbs: 1,    fat: 10,   protein: 12,   fibre: 0,   sugar: 0 },
+  "tuna in spring water":     { cal: 104, carbs: 0,    fat: 0.7,  protein: 24.5, fibre: 0,   sugar: 0 },
+  "lite milk":                { cal: 45,  carbs: 5,    fat: 1.5,  protein: 3.5,  fibre: 0,   sugar: 5 },
+};
+
+function getMacros(name) {
+  return MACRO_DB[name.toLowerCase()] || null;
+}
+
+function calcMacrosForRecipe(recipe) {
+  let cal = 0, carbs = 0, fat = 0, protein = 0, fibre = 0, sugar = 0;
+  let hasAny = false;
+  (recipe.ingredients || []).forEach(ing => {
+    const m = getMacros(ing.name);
+    if (!m) return;
+    const qty = parseFloat(ing.qty) || 0;
+    const unit = ing.unit || "";
+    let grams = null;
+    if (unit === "g") grams = qty;
+    else if (unit === "kg") grams = qty * 1000;
+    else if (unit === "ml") grams = qty;
+    else if (unit === "L") grams = qty * 1000;
+    if (grams !== null) {
+      const scale = grams / 100;
+      cal += m.cal * scale;
+      carbs += m.carbs * scale;
+      fat += m.fat * scale;
+      protein += m.protein * scale;
+      fibre += m.fibre * scale;
+      sugar += m.sugar * scale;
+      hasAny = true;
+    }
+  });
+  if (!hasAny) return null;
+  return { cal: Math.round(cal), carbs: Math.round(carbs), fat: Math.round(fat), protein: Math.round(protein), fibre: Math.round(fibre), sugar: Math.round(sugar) };
+}
+
 function guessCategory(name) {
   const n = name.toLowerCase();
   if (/chicken|beef|pork|lamb|bacon|mince|steak|fish|salmon|tuna|prawn|turkey|sausage/.test(n)) return "Meat";
@@ -897,18 +960,102 @@ return (
             )}
             {recipe && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18" }}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
                   {recipe.ingredients.slice(0, 4).map((ing, idx) => {
                     const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
                     return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name}</span>;
                   })}
                   {recipe.ingredients.length > 4 && <span className="dm" style={{ fontSize: 10, color: "#555", padding: "2px 4px" }}>+{recipe.ingredients.length - 4} more</span>}
                 </div>
+                {(() => {
+                  const m = calcMacrosForRecipe(recipe);
+                  if (!m) return null;
+                  const serves = recipe.serves || 1;
+                  const attending = week[DAYS[selectedDay]]?.[mt]?.attending?.length || 1;
+                  const perPerson = { cal: Math.round(m.cal / serves), carbs: Math.round(m.carbs / serves), fat: Math.round(m.fat / serves), protein: Math.round(m.protein / serves) };
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 6, borderTop: "1px solid #1e1c18" }}>
+                      <span className="dm" style={{ fontSize: 16, fontWeight: 700, color: "#c8a96e" }}>{perPerson.cal}</span>
+                      <span className="dm" style={{ fontSize: 9, color: "#555" }}>cal</span>
+                      {[["P", perPerson.protein, "#5c9fe0"], ["C", perPerson.carbs, "#c8a96e"], ["F", perPerson.fat, "#a78bca"]].map(([label, val, color]) => (
+                        <div key={label} className="dm" style={{ fontSize: 11, color }}>
+                          <span style={{ fontWeight: 700 }}>{val}g</span> <span style={{ color: "#555", fontSize: 9 }}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
         );
       })}
+{/* ── Daily Macro Summary ── */}
+      {(() => {
+        let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFibre = 0, totalSugar = 0;
+        let hasMacros = false;
+        MEAL_TYPES.forEach(mt => {
+          const slot = week[DAYS[selectedDay]]?.[mt];
+          if (!slot?.mealId) return;
+          const recipe = recipes.find(r => r.id === slot.mealId);
+          if (!recipe) return;
+          const m = calcMacrosForRecipe(recipe);
+          if (!m) return;
+          const perServe = { cal: m.cal / (recipe.serves || 1), protein: m.protein / (recipe.serves || 1), carbs: m.carbs / (recipe.serves || 1), fat: m.fat / (recipe.serves || 1), fibre: m.fibre / (recipe.serves || 1), sugar: m.sugar / (recipe.serves || 1) };
+          totalCal += perServe.cal;
+          totalProtein += perServe.protein;
+          totalCarbs += perServe.carbs;
+          totalFat += perServe.fat;
+          totalFibre += perServe.fibre;
+          totalSugar += perServe.sugar;
+          hasMacros = true;
+        });
+        MEMBERS.forEach(member => {
+          const snackKey = `snack_${member}`;
+          const slot = week[DAYS[selectedDay]]?.[snackKey];
+          if (!slot?.mealId) return;
+          const recipe = recipes.find(r => r.id === slot.mealId);
+          if (!recipe) return;
+          const m = calcMacrosForRecipe(recipe);
+          if (!m) return;
+          totalCal += m.cal;
+          totalProtein += m.protein;
+          totalCarbs += m.carbs;
+          totalFat += m.fat;
+          totalFibre += m.fibre;
+          totalSugar += m.sugar;
+          hasMacros = true;
+        });
+        if (!hasMacros) return null;
+        return (
+          <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: "#c8a96e33" }}>
+            <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 10 }}>
+              📊 Daily Totals
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 12 }}>
+              <span style={{ fontSize: 28, fontWeight: 700, color: "#c8a96e", fontFamily: "DM Sans, sans-serif" }}>{Math.round(totalCal)}</span>
+              <span className="dm" style={{ fontSize: 12, color: "#555" }}>calories</span>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
+              {[["Protein", totalProtein, "#5c9fe0"], ["Carbs", totalCarbs, "#c8a96e"], ["Fat", totalFat, "#a78bca"]].map(([label, val, color]) => (
+                <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 10, padding: "8px 10px", border: `1px solid ${color}33` }}>
+                  <div className="dm" style={{ fontSize: 16, fontWeight: 700, color }}>{Math.round(val)}g</div>
+                  <div className="dm" style={{ fontSize: 10, color: "#555" }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[["Fibre", totalFibre], ["Sugar", totalSugar]].map(([label, val]) => (
+                <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 10, padding: "6px 10px", border: "1px solid #252320" }}>
+                  <div className="dm" style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{Math.round(val)}g</div>
+                  <div className="dm" style={{ fontSize: 10, color: "#444" }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
     {/* ── Snack Cards ── */}
       {MEMBERS.filter(m => !activeUser || m === activeUser).map(member => {
         const snackKey = `snack_${member}`;
@@ -1025,7 +1172,34 @@ return (
                   Edit
                 </button>
               </div>
-              
+              {(() => {
+                const m = calcMacrosForRecipe(r);
+                if (!m) return null;
+                const perServe = { cal: Math.round(m.cal / (r.serves || 1)), carbs: Math.round(m.carbs / (r.serves || 1)), fat: Math.round(m.fat / (r.serves || 1)), protein: Math.round(m.protein / (r.serves || 1)), fibre: Math.round(m.fibre / (r.serves || 1)), sugar: Math.round(m.sugar / (r.serves || 1)) };
+                return (
+                  <div style={{ borderTop: "1px solid #1e1c18", paddingTop: 10, marginTop: 4 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
+                      <span className="dm" style={{ fontSize: 18, fontWeight: 700, color: "#c8a96e" }}>{perServe.cal}</span>
+                      <span className="dm" style={{ fontSize: 10, color: "#555" }}>cal / serve</span>
+                      <span className="dm" style={{ fontSize: 10, color: "#444", marginLeft: 4 }}>(total {m.cal})</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      {[["P", perServe.protein, "#5c9fe0"], ["C", perServe.carbs, "#c8a96e"], ["F", perServe.fat, "#a78bca"]].map(([label, val, color]) => (
+                        <div key={label} className="dm" style={{ fontSize: 11, color }}>
+                          <span style={{ fontWeight: 700 }}>{val}g</span> <span style={{ color: "#555" }}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                      {[["Fibre", perServe.fibre], ["Sugar", perServe.sugar]].map(([label, val]) => (
+                        <div key={label} className="dm" style={{ fontSize: 10, color: "#444" }}>
+                          {val}g <span style={{ color: "#333" }}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>
