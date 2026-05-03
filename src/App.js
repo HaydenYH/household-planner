@@ -483,16 +483,29 @@ const [shoppingListSnapshot, setShoppingListSnapshot] = useState(null);
 const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
 const [newGoalMember, setNewGoalMember] = useState(null);
-const [mealChangeTrigger, setMealChangeTrigger] = useState(0);
 const [showAddIngredient, setShowAddIngredient] = useState(false);
 const [newIngredient, setNewIngredient] = useState({ name: "", store: "Woolworths", category: "Other" });
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
-const shoppingListRef = useRef(safeShoppingList);
-useEffect(() => { shoppingListRef.current = safeShoppingList; }, [safeShoppingList]);
 const recipesRef = useRef(recipes);
 useEffect(() => { recipesRef.current = recipes; }, [recipes]);
+
+function mergeGeneratedShoppingList(generated, existing = []) {
+  const existingById = new Map((Array.isArray(existing) ? existing : []).map(item => [item.id, item]));
+  const generatedIds = new Set(generated.map(item => item.id));
+  const merged = generated.map(item => {
+    const existingItem = existingById.get(item.id);
+    return {
+      ...item,
+      checked: existingItem?.checked ?? item.checked,
+      pantryQty: existingItem?.pantryQty ?? item.pantryQty,
+      pantryUnit: existingItem?.pantryUnit ?? item.pantryUnit,
+    };
+  });
+  const customItems = (Array.isArray(existing) ? existing : []).filter(item => !generatedIds.has(item.id));
+  return [...merged, ...customItems];
+}
 
 // ── Meal actions ──────────────────────────────────────────────────────────
 function toggleAttending(day, mealType, member) {
@@ -510,11 +523,12 @@ function setMeal(day, mealType, recipeId, leftovers = false) {
       const nextDay = DAYS[(dayIndex + 1) % 7];
       newWeek[nextDay] = { ...newWeek[nextDay], Lunch: { ...newWeek[nextDay].Lunch, mealId: recipeId, leftovers: true } };
     }
-    
+
+    const list = buildShoppingListFromWeek(newWeek, recipesRef.current);
+    setShoppingList(prev => mergeGeneratedShoppingList(list, prev));
     return newWeek;
   });
   setPickerFor(null);
-  setMealChangeTrigger(t => t + 1);
 }
 
 function changeWeek(offset) {
@@ -594,7 +608,7 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
 
 function generateShoppingList(switchView = true) {
   const list = buildShoppingListFromWeek(week);
-  setShoppingList(list);
+  setShoppingList(prev => mergeGeneratedShoppingList(list, prev));
   if (switchView) setView("shopping");
 }
 
@@ -652,17 +666,6 @@ setGoals(prev => ({
 function deleteGoal(member, goalId) {
 setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId) }));
 }
-const weekRef = useRef(week);
-useEffect(() => { weekRef.current = week; }, [week]);
-
-useEffect(() => {
-  if (mealChangeTrigger === 0) return;
-  const updated = buildShoppingListFromWeek(weekRef.current, recipesRef.current);
-  if (updated.length > 0) {
-    setShoppingList(updated);
-  }
-}, [mealChangeTrigger]);
-
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
 const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 
