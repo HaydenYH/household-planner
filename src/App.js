@@ -150,34 +150,6 @@ function getMacros(name) {
   return MACRO_DB[name.toLowerCase()] || null;
 }
 
-function calcMacrosForRecipe(recipe) {
-  let cal = 0, carbs = 0, fat = 0, protein = 0, fibre = 0, sugar = 0;
-  let hasAny = false;
-  (recipe.ingredients || []).forEach(ing => {
-    const m = getMacros(ing.name);
-    if (!m) return;
-    const qty = parseFloat(ing.qty) || 0;
-    const unit = ing.unit || "";
-    let grams = null;
-    if (unit === "g") grams = qty;
-    else if (unit === "kg") grams = qty * 1000;
-    else if (unit === "ml") grams = qty;
-    else if (unit === "L") grams = qty * 1000;
-    if (grams !== null) {
-      const scale = grams / 100;
-      cal += m.cal * scale;
-      carbs += m.carbs * scale;
-      fat += m.fat * scale;
-      protein += m.protein * scale;
-      fibre += m.fibre * scale;
-      sugar += m.sugar * scale;
-      hasAny = true;
-    }
-  });
-  if (!hasAny) return null;
-  return { cal: Math.round(cal), carbs: Math.round(carbs), fat: Math.round(fat), protein: Math.round(protein), fibre: Math.round(fibre), sugar: Math.round(sugar) };
-}
-
 const GRAMS_PER_UNIT = {
   "banana":              { whole: 120 },
   "brown onion":         { whole: 150 },
@@ -430,7 +402,7 @@ function IngredientAutocomplete({ value, onChange, onSelectFull, recipes, extraI
     }));
     (extraIngredients || []).forEach(i => {
       if (i.name.trim() && !seen.has(i.name.toLowerCase())) {
-        seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: i.unit || "", category: i.category || guessCategory(i.name) });seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: "", category: i.category || guessCategory(i.name) });
+        seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: i.unit || "", category: i.category || guessCategory(i.name) });
       }
     });
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
