@@ -652,11 +652,15 @@ setGoals(prev => ({
 function deleteGoal(member, goalId) {
 setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId) }));
 }
+const weekRef = useRef(week);
+useEffect(() => { weekRef.current = week; }, [week]);
+
 useEffect(() => {
   if (mealChangeTrigger === 0) return;
-  const updated = buildShoppingListFromWeek(week, recipesRef.current);
-  console.log("Auto-updating shopping list, items:", updated.length);
-  setShoppingList(updated);
+  const updated = buildShoppingListFromWeek(weekRef.current, recipesRef.current);
+  if (updated.length > 0) {
+    setShoppingList(updated);
+  }
 }, [mealChangeTrigger]);
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
@@ -811,6 +815,19 @@ return (
                 </button>
               ))}
             </div>
+            {recipe && mt !== "Lunch" && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18", display: "flex", alignItems: "center", gap: 8 }}>
+                <div onClick={() => {
+                  const current = week[DAYS[selectedDay]][mt].leftovers || false;
+                  setMeal(DAYS[selectedDay], mt, recipe.id, !current);
+                }} style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${week[DAYS[selectedDay]][mt].leftovers ? "#c8a96e" : "#555"}`, background: week[DAYS[selectedDay]][mt].leftovers ? "#c8a96e" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {week[DAYS[selectedDay]][mt].leftovers && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0c0c0a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+                <span className="dm" style={{ fontSize: 12, color: week[DAYS[selectedDay]][mt].leftovers ? "#c8a96e" : "#666" }}>
+                  Leftovers → {FULL_DAYS[(DAYS.indexOf(DAYS[selectedDay]) + 1) % 7]} Lunch
+                </span>
+              </div>
+            )}
             {recipe && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
