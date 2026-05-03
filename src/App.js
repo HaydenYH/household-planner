@@ -494,13 +494,8 @@ useEffect(() => { recipesRef.current = recipes; }, [recipes]);
 useEffect(() => {
   if (!loaded) return;
   const generated = buildShoppingListFromWeek(week, recipesRef.current);
-  if (generated.length === 0) {
-    const onlyCustom = safeShoppingList.filter(item => String(item.id).startsWith("custom-"));
-    if (onlyCustom.length !== safeShoppingList.length) {
-      setShoppingList(onlyCustom);
-    }
-  }
-}, [loaded, week, safeShoppingList]);
+  setShoppingList(prev => mergeGeneratedShoppingList(generated, prev));
+}, [loaded, week]);
 
 function mergeGeneratedShoppingList(generated, existing = []) {
   const existingById = new Map((Array.isArray(existing) ? existing : []).map(item => [item.id, item]));
@@ -546,8 +541,6 @@ function setMeal(day, mealType, recipeId, leftovers = false) {
       }
     }
 
-    const list = buildShoppingListFromWeek(newWeek, recipesRef.current);
-    setShoppingList(prev => mergeGeneratedShoppingList(list, prev));
     return newWeek;
   });
   setPickerFor(null);
