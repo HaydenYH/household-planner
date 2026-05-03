@@ -102,6 +102,7 @@ const MEAL_ICONS = {
   Breakfast: "☀️",
   Lunch: "🥪",
   Dinner: "🍽️",
+  Snack: "🍎",
 };
 const CATEGORIES = ["Meat", "Bread / Dairy", "Vegetables", "Freezer", "Soft Drinks", "Other"];
 
@@ -239,9 +240,13 @@ return g;
 }
 
 function buildEmptyWeek() {
-const w = {};
-DAYS.forEach(d => { w[d] = {}; MEAL_TYPES.forEach(m => { w[d][m] = { attending: [...MEMBERS], mealId: null, leftovers: false }; }); });
-return w;
+  const w = {};
+  DAYS.forEach(d => {
+    w[d] = {};
+    MEAL_TYPES.forEach(m => { w[d][m] = { attending: [...MEMBERS], mealId: null, leftovers: false }; });
+    MEMBERS.forEach(member => { w[d][`snack_${member}`] = { mealId: null }; });
+  });
+  return w;
 }
 
 function getWeekStart() {
@@ -487,6 +492,7 @@ const [newGoalText, setNewGoalText] = useState("");
 const [newGoalMember, setNewGoalMember] = useState(null);
 const [showAddIngredient, setShowAddIngredient] = useState(false);
 const [newIngredient, setNewIngredient] = useState({ name: "", store: "Woolworths", category: "Other" });
+const [activeUser, setActiveUser] = useState(null);
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
@@ -728,6 +734,15 @@ return (
           {!loaded && <span className="dm pulse" style={{ fontSize: 9, color: "#c8a96e" }}>syncing...</span>}
           {loaded && !notConfigured && <span className="dm" style={{ fontSize: 9, color: "#4caf50" }}>● live</span>}
         </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+          {MEMBERS.map(m => (
+            <button key={m} onClick={() => setActiveUser(activeUser === m ? null : m)}
+              className="dm"
+              style={{ fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 100, border: `1.5px solid ${activeUser === m ? MEMBER_COLORS[m] : "#2a2824"}`, background: activeUser === m ? MEMBER_COLORS[m] : "transparent", color: activeUser === m ? "#0c0c0a" : "#555", cursor: "pointer", transition: "all .15s" }}>
+              {m}
+            </button>
+          ))}
+        </div>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: "-.02em" }}>
           {view === "week" ? "Weekly Planner" : view === "day" ? FULL_DAYS[selectedDay] : view === "recipes" ? "Recipe Book" : view === "shopping" ? "Shopping List" : "Weekly Goals"}
         </h1>
@@ -857,6 +872,36 @@ return (
                   })}
                   {recipe.ingredients.length > 4 && <span className="dm" style={{ fontSize: 10, color: "#555", padding: "2px 4px" }}>+{recipe.ingredients.length - 4} more</span>}
                 </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    {/* ── Snack Cards ── */}
+      {MEMBERS.filter(m => !activeUser || m === activeUser).map(member => {
+        const snackKey = `snack_${member}`;
+        const snackSlot = week[DAYS[selectedDay]]?.[snackKey] || { mealId: null };
+        const snackRecipe = recipes.find(r => r.id === snackSlot.mealId);
+        const color = MEMBER_COLORS[member];
+        return (
+          <div className="card" key={snackKey} style={{ marginBottom: 12, padding: "16px", borderColor: color + "33" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: snackRecipe ? 12 : 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 20 }}>🍎</span>
+                <span style={{ fontWeight: 700, fontSize: 16 }}>{member}'s Snack</span>
+              </div>
+              <button className="meal-pill" onClick={() => setPickerFor({ day: DAYS[selectedDay], mealType: "Snack", member })}
+                style={{ borderColor: color + "55", color }}>
+                {snackRecipe ? snackRecipe.name : "+ Add snack"}
+              </button>
+            </div>
+            {snackRecipe && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {snackRecipe.ingredients.slice(0, 4).map((ing, idx) => {
+                  const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
+                  return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name}</span>;
+                })}
+                {snackRecipe.ingredients.length > 4 && <span className="dm" style={{ fontSize: 10, color: "#555", padding: "2px 4px" }}>+{snackRecipe.ingredients.length - 4} more</span>}
               </div>
             )}
           </div>
@@ -1248,13 +1293,23 @@ return (
         <h2 style={{ margin: 0, fontSize: 18 }}>{MEAL_ICONS[pickerFor.mealType]} {pickerFor.mealType} — {pickerFor.day}</h2>
         <button onClick={() => setPickerFor(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
       </div>
-      {week[pickerFor.day]?.[pickerFor.mealType]?.mealId && (
-        <button className="btn" onClick={() => { setMeal(pickerFor.day, pickerFor.mealType, null); setPickerLeftovers(false); }}
-          style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 10 }}>
+      {(pickerFor.mealType === "Snack"
+        ? week[pickerFor.day]?.[`snack_${pickerFor.member}`]?.mealId
+        : week[pickerFor.day]?.[pickerFor.mealType]?.mealId) && (
+        <button className="btn" onClick={() => {
+          if (pickerFor.mealType === "Snack") {
+            const snackKey = `snack_${pickerFor.member}`;
+            setWeek(prev => ({ ...prev, [pickerFor.day]: { ...prev[pickerFor.day], [snackKey]: { mealId: null } } }));
+            setPickerFor(null);
+          } else {
+            setMeal(pickerFor.day, pickerFor.mealType, null);
+            setPickerLeftovers(false);
+          }
+        }} style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 10 }}>
           Remove meal
         </button>
       )}
-      {recipes.filter(r => (r.types || [r.type]).includes(pickerFor.mealType)).map(r => {
+      {recipes.filter(r => pickerFor.mealType === "Snack" || (r.types || [r.type]).includes(pickerFor.mealType)).map(r => {
         const active = week[pickerFor.day]?.[pickerFor.mealType]?.mealId === r.id;
         const currentLeftovers = active ? (pickerLeftovers) : false;
         const dayIndex = DAYS.indexOf(pickerFor.day);
@@ -1262,7 +1317,15 @@ return (
         const nextDayName = FULL_DAYS[(dayIndex + 1) % 7];
         return (
           <div key={r.id} style={{ padding: "13px 15px", borderRadius: 12, marginBottom: 7, background: active ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${active ? "#c8a96e" : "#252320"}` }}>
-            <div onClick={() => setMeal(pickerFor.day, pickerFor.mealType, r.id, pickerLeftovers)} style={{ cursor: "pointer" }}>
+            <div onClick={() => {
+              if (pickerFor.mealType === "Snack") {
+                const snackKey = `snack_${pickerFor.member}`;
+                setWeek(prev => ({ ...prev, [pickerFor.day]: { ...prev[pickerFor.day], [snackKey]: { mealId: r.id } } }));
+                setPickerFor(null);
+              } else {
+                setMeal(pickerFor.day, pickerFor.mealType, r.id, pickerLeftovers);
+              }
+            }} style={{ cursor: "pointer" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <span style={{ fontWeight: 600, fontSize: 14 }}>{r.name}</span>
                 <span className="dm" style={{ fontSize: 10, color: "#555" }}>serves {r.serves || "?"}</span>
