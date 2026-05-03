@@ -493,6 +493,8 @@ const [newGoalMember, setNewGoalMember] = useState(null);
 const [showAddIngredient, setShowAddIngredient] = useState(false);
 const [newIngredient, setNewIngredient] = useState({ name: "", store: "Woolworths", category: "Other" });
 const [activeUser, setActiveUser] = useState(null);
+const [snackPickerFor, setSnackPickerFor] = useState(null);
+const [snackSearch, setSnackSearch] = useState("");
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
@@ -590,6 +592,7 @@ setNewShoppingItem({ name: "", qty: "", unit: "", store: "Woolworths" });
 function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
   const consolidated = {};
   DAYS.forEach(day => {
+    // Regular meals
     MEAL_TYPES.forEach(mealType => {
       const slot = currentWeek[day]?.[mealType];
       if (!slot?.mealId || !slot.attending?.length) return;
@@ -623,6 +626,32 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
         }
        consolidated[key].category = ing.category || guessCategory(ing.name);
         consolidated[key].quantities.push({ qty: ing.qty * scale, unit: ing.unit || "" });
+      });
+    });
+
+    // Snacks per member
+    MEMBERS.forEach(member => {
+      const snackKey = `snack_${member}`;
+      const slot = currentWeek[day]?.[snackKey];
+      if (!slot?.mealId) return;
+      const recipe = currentRecipes.find(r => r.id === slot.mealId);
+      if (!recipe) return;
+      recipe.ingredients.forEach(ing => {
+        const store = ing.store || "Woolworths";
+        const key = `${ing.name.toLowerCase()}-${store}`;
+        if (!consolidated[key]) {
+          consolidated[key] = {
+            id: key,
+            name: ing.name,
+            store,
+            checked: false,
+            pantryQty: 0,
+            pantryUnit: ing.unit || "",
+            quantities: [],
+          };
+        }
+        consolidated[key].category = ing.category || guessCategory(ing.name);
+        consolidated[key].quantities.push({ qty: ing.qty || 1, unit: ing.unit || "" });
       });
     });
   });
@@ -890,7 +919,7 @@ return (
                 <span style={{ fontSize: 20 }}>🍎</span>
                 <span style={{ fontWeight: 700, fontSize: 16 }}>{member}'s Snack</span>
               </div>
-              <button className="meal-pill" onClick={() => setPickerFor({ day: DAYS[selectedDay], mealType: "Snack", member })}
+              <button className="meal-pill" onClick={() => { setSnackPickerFor({ day: DAYS[selectedDay], member }); setSnackSearch(""); }}
                 style={{ borderColor: color + "55", color }}>
                 {snackRecipe ? snackRecipe.name : "+ Add snack"}
               </button>
@@ -1439,6 +1468,85 @@ return (
         }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
           Save Ingredient
         </button>
+      </div>
+    </div>
+  )}
+
+{/* ── Snack Picker Modal ── */}
+  {snackPickerFor && (
+    <div className="overlay" onClick={() => setSnackPickerFor(null)}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>🍎 {snackPickerFor.member}'s Snack</h2>
+          <button onClick={() => setSnackPickerFor(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
+        </div>
+        {(() => {
+          const snackKey = `snack_${snackPickerFor.member}`;
+          const currentSnack = week[snackPickerFor.day]?.[snackKey]?.mealId;
+          const currentSnackRecipe = currentSnack ? recipes.find(r => r.id === currentSnack) : null;
+          const allIngredients = [];
+          recipes.forEach(r => r.ingredients.forEach(i => {
+            if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+              allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+            }
+          }));
+          (standaloneIngredients || []).forEach(i => {
+            if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+              allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+            }
+          });
+          const filtered = snackSearch.trim().length > 0
+            ? allIngredients.filter(i => i.name.toLowerCase().includes(snackSearch.toLowerCase()))
+            : allIngredients;
+          const grouped = CATEGORIES.filter(cat => filtered.some(i => (i.category || guessCategory(i.name)) === cat));
+          return (
+            <>
+              {currentSnackRecipe && (
+                <button className="btn" onClick={() => {
+                  setWeek(prev => ({ ...prev, [snackPickerFor.day]: { ...prev[snackPickerFor.day], [snackKey]: { mealId: null } } }));
+                  setSnackPickerFor(null);
+                }} style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 10 }}>
+                  Remove snack
+                </button>
+              )}
+              <input
+                value={snackSearch}
+                onChange={e => setSnackSearch(e.target.value)}
+                placeholder="Search ingredients..."
+                style={{ width: "100%", marginBottom: 14 }}
+                autoFocus
+              />
+              {grouped.map(cat => (
+                <div key={cat} style={{ marginBottom: 14 }}>
+                  <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 6 }}>
+                    {CATEGORY_ICONS[cat]} {cat}
+                  </div>
+                  {filtered.filter(i => (i.category || guessCategory(i.name)) === cat).sort((a,b) => a.name.localeCompare(b.name)).map(ing => {
+                    const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
+                    const isSelected = currentSnackRecipe?.name === ing.name;
+                    return (
+                      <div key={ing.name} onClick={() => {
+                        const snackId = `snack-ing-${ing.name.toLowerCase().replace(/\s+/g, "-")}`;
+                        const existingRecipe = recipes.find(r => r.id === snackId);
+                        if (!existingRecipe) {
+                          setRecipes(prev => [...prev, { id: snackId, name: ing.name, types: ["Snack"], serves: 1, ingredients: [{ name: ing.name, qty: 1, unit: ing.unit || "whole", store: ing.store, category: ing.category || guessCategory(ing.name) }] }]);
+                        }
+                        setWeek(prev => ({ ...prev, [snackPickerFor.day]: { ...prev[snackPickerFor.day], [snackKey]: { mealId: snackId } } }));
+                        setSnackPickerFor(null);
+                      }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: isSelected ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${isSelected ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
+                        <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
+                        <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {filtered.length === 0 && (
+                <div className="dm" style={{ textAlign: "center", padding: 24, color: "#444", fontSize: 13 }}>No ingredients found</div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   )}
