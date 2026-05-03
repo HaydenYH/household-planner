@@ -450,6 +450,7 @@ const [compactShopping, setCompactShopping] = useState(false);
 const [shoppingListSnapshot, setShoppingListSnapshot] = useState(null);
 const [newGoalMember, setNewGoalMember] = useState(null);
 const [newGoalText, setNewGoalText] = useState("");
+const [mealChangeTrigger, setMealChangeTrigger] = useState(0);
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
@@ -478,6 +479,7 @@ function setMeal(day, mealType, recipeId, leftovers = false) {
     return newWeek;
   });
   setPickerFor(null);
+  setMealChangeTrigger(t => t + 1);
 }
 
 function changeWeek(offset) {
@@ -615,12 +617,13 @@ function deleteGoal(member, goalId) {
 setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId) }));
 }
 useEffect(() => {
-  if (!weekReady) return;
+  if (mealChangeTrigger === 0) return;
   if (shoppingListRef.current.length > 0) {
     const updated = buildShoppingListFromWeek(week, recipesRef.current);
+    console.log("Auto-updating shopping list, items:", updated.length);
     setShoppingList(updated);
   }
-}, [week]);
+}, [mealChangeTrigger]);
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
 const notConfigured = !SUPABASE_URL || !SUPABASE_ANON_KEY;
