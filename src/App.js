@@ -491,6 +491,17 @@ const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
 const recipesRef = useRef(recipes);
 useEffect(() => { recipesRef.current = recipes; }, [recipes]);
 
+useEffect(() => {
+  if (!loaded) return;
+  const generated = buildShoppingListFromWeek(week, recipesRef.current);
+  if (generated.length === 0) {
+    const onlyCustom = safeShoppingList.filter(item => String(item.id).startsWith("custom-"));
+    if (onlyCustom.length !== safeShoppingList.length) {
+      setShoppingList(onlyCustom);
+    }
+  }
+}, [loaded, week, safeShoppingList]);
+
 function mergeGeneratedShoppingList(generated, existing = []) {
   const existingById = new Map((Array.isArray(existing) ? existing : []).map(item => [item.id, item]));
   const generatedIds = new Set(generated.map(item => item.id));
