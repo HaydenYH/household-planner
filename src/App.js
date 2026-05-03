@@ -503,7 +503,7 @@ function mergeGeneratedShoppingList(generated, existing = []) {
       pantryUnit: existingItem?.pantryUnit ?? item.pantryUnit,
     };
   });
-  const customItems = (Array.isArray(existing) ? existing : []).filter(item => !generatedIds.has(item.id));
+  const customItems = (Array.isArray(existing) ? existing : []).filter(item => String(item.id).startsWith("custom-") && !generatedIds.has(item.id));
   return [...merged, ...customItems];
 }
 
