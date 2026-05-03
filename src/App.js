@@ -136,7 +136,7 @@ const MACRO_DB = {
   "low carb potato":          { cal: 45,  carbs: 9.1,  fat: 0,    protein: 2.4,  fibre: 1.8, sugar: 0 },
   "coconut milk":             { cal: 36,  carbs: 0.2,  fat: 3.4,  protein: 0.4,  fibre: 0,   sugar: 0 },
   "lebanese cucumber":        { cal: 16,  carbs: 2.5,  fat: 0.1,  protein: 0.6,  fibre: 0.5, sugar: 0 },
-  "rice":                     { cal: 113, carbs: 25,   fat: 0.5,  protein: 1.9,  fibre: 0.3, sugar: 0 },
+  "rice (cooked)":        { cal: 113, carbs: 25,   fat: 0.5,  protein: 1.9,  fibre: 0.3, sugar: 0 },
   "black beans":              { cal: 111, carbs: 15.8, fat: 0.7,  protein: 7.8,  fibre: 8.7, sugar: 0 },
   "corn":                     { cal: 77,  carbs: 13.5, fat: 1.6,  protein: 2,    fibre: 2,   sugar: 0 },
   "cherry tomatoes":          { cal: 18,  carbs: 4,    fat: 0,    protein: 0,    fibre: 1.2, sugar: 0 },
@@ -146,8 +146,12 @@ const MACRO_DB = {
   "lite milk":                { cal: 45,  carbs: 5,    fat: 1.5,  protein: 3.5,  fibre: 0,   sugar: 5 },
 };
 
-function getMacros(name) {
-  return MACRO_DB[name.toLowerCase()] || null;
+function getMacros(name, standaloneIngs = []) {
+  const fromDB = MACRO_DB[name.toLowerCase()] || null;
+  if (fromDB) return fromDB;
+  const fromStandalone = (standaloneIngs || []).find(i => i.name.toLowerCase() === name.toLowerCase());
+  if (fromStandalone?.macros) return fromStandalone.macros;
+  return null;
 }
 
 const GRAMS_PER_UNIT = {
@@ -310,7 +314,7 @@ const DEFAULT_RECIPES = [
   { id: 4, name: "Chicken Taco Bowls", types: ["Lunch"], serves: 3, ingredients: [
 { name: "Lebanese Cucumber", qty: 1.33, unit: "whole", store: "Woolworths", category: "Vegetables" },
     { name: "Chicken Breast", qty: 533, unit: "g", store: "Costco", category: "Meat" },
-    { name: "Rice", qty: 300, unit: "g", store: "Woolworths", category: "Bread / Dairy" },
+    { name: "Rice (cooked)", qty: 300, unit: "g", store: "Woolworths", category: "Bread / Dairy" },
     { name: "Black Beans", qty: 150, unit: "g", store: "Aldi", category: "Other" },
     { name: "Corn", qty: 167, unit: "g", store: "Aldi", category: "Vegetables" },
     { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Aldi", category: "Bread / Dairy" },
@@ -577,7 +581,7 @@ const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
 const [newGoalMember, setNewGoalMember] = useState(null);
 const [showAddIngredient, setShowAddIngredient] = useState(false);
-const [newIngredient, setNewIngredient] = useState({ name: "", store: "Woolworths", category: "Other" });
+const [newIngredient, setNewIngredient] = useState({ name: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } });
 const [activeUser, setActiveUser] = useState(null);
 const [snackPickerFor, setSnackPickerFor] = useState(null);
 const [snackSearch, setSnackSearch] = useState("");
@@ -1625,11 +1629,11 @@ return (
 
 {/* ── Add Ingredient Modal ── */}
   {showAddIngredient && (
-    <div className="overlay" onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", store: "Woolworths", category: "Other" }); }}>
+    <div className="overlay" onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } }); }}>
       <div className="sheet" onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <h2 style={{ margin: 0, fontSize: 18 }}>New Ingredient</h2>
-          <button onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", store: "Woolworths", category: "Other" }); }}
+          <button onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } }); }}
             style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
         </div>
         <div style={{ marginBottom: 12 }}>
@@ -1666,15 +1670,76 @@ return (
             {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICONS[c]} {c}</option>)}
           </select>
         </div>
+
+        {/* ── Macros section ── */}
+        <div style={{ marginBottom: 16 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Macros per 100g</div>
+          <button className="btn" onClick={async () => {
+            const name = newIngredient.name.trim();
+            if (!name) return;
+            setNewIngredient(p => ({ ...p, _lookingUp: true }));
+            try {
+              const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  model: "claude-sonnet-4-20250514",
+                  max_tokens: 1000,
+                  messages: [{
+                    role: "user",
+                    content: `Give me the nutritional info per 100g for: ${name}. Respond ONLY with a JSON object with these exact keys: cal, protein, carbs, fat, fibre, sugar. All values should be numbers (not strings). No markdown, no explanation, just the JSON object.`
+                  }]
+                })
+              });
+              const data = await response.json();
+              const text = data.content?.find(b => b.type === "text")?.text || "";
+              const clean = text.replace(/```json|```/g, "").trim();
+              const macros = JSON.parse(clean);
+              setNewIngredient(p => ({ ...p, _lookingUp: false, macros: {
+                cal: macros.cal ?? "",
+                protein: macros.protein ?? "",
+                carbs: macros.carbs ?? "",
+                fat: macros.fat ?? "",
+                fibre: macros.fibre ?? "",
+                sugar: macros.sugar ?? "",
+              }}));
+            } catch (err) {
+              setNewIngredient(p => ({ ...p, _lookingUp: false }));
+              alert("Lookup failed — please fill in macros manually.");
+            }
+          }} style={{ width: "100%", marginBottom: 12, padding: "10px", background: newIngredient._lookingUp ? "#1e2a1e" : "#1a2a1a", color: newIngredient._lookingUp ? "#4caf50" : "#4caf50", border: "1px solid #4caf5044" }}>
+            {newIngredient._lookingUp ? "⏳ Looking up..." : "✨ Look up with Claude"}
+          </button>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
+              <div key={key}>
+                <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>{label}</div>
+                <input type="number" min="0" value={newIngredient.macros?.[key] ?? ""} onChange={e => setNewIngredient(p => ({ ...p, macros: { ...p.macros, [key]: e.target.value } }))}
+                  placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+
         <button className="btn" onClick={() => {
           const name = newIngredient.name.trim();
           if (!name) return;
           const exists = (standaloneIngredients || []).find(i => i.name.toLowerCase() === name.toLowerCase());
+          const macros = newIngredient.macros;
+          const hasMacros = macros && Object.values(macros).some(v => v !== "" && v !== null);
+          const parsedMacros = hasMacros ? {
+            cal: parseFloat(macros.cal) || 0,
+            protein: parseFloat(macros.protein) || 0,
+            carbs: parseFloat(macros.carbs) || 0,
+            fat: parseFloat(macros.fat) || 0,
+            fibre: parseFloat(macros.fibre) || 0,
+            sugar: parseFloat(macros.sugar) || 0,
+          } : null;
           if (!exists) {
-            setStandaloneIngredients(prev => [...(Array.isArray(prev) ? prev : []), { name, store: newIngredient.store, category: newIngredient.category || guessCategory(name) }]);
+            setStandaloneIngredients(prev => [...(Array.isArray(prev) ? prev : []), { name, store: newIngredient.store, category: newIngredient.category || guessCategory(name), ...(parsedMacros ? { macros: parsedMacros } : {}) }]);
           }
           setShowAddIngredient(false);
-          setNewIngredient({ name: "", store: "Woolworths", category: "Other" });
+          setNewIngredient({ name: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } });
         }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
           Save Ingredient
         </button>
