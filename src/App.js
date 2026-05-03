@@ -1527,14 +1527,16 @@ return (
                     return (
                       <div key={ing.name} onClick={() => {
                         const snackId = `snack-ing-${ing.name.toLowerCase().replace(/\s+/g, "-")}`;
-                        const existingRecipe = recipes.find(r => r.id === snackId);
-                        if (!existingRecipe) {
-                          const allIngs = [];
-                          recipes.forEach(r => r.ingredients.forEach(i => { if (i.name.toLowerCase() === ing.name.toLowerCase()) allIngs.push(i); }));
-                          const matched = allIngs[0];
-                          const unit = matched?.unit || ing.unit || "whole";
-                          setRecipes(prev => [...prev, { id: snackId, name: ing.name, types: ["Snack"], serves: 1, ingredients: [{ name: ing.name, qty: 1, unit, store: ing.store, category: ing.category || guessCategory(ing.name) }] }]);
-                        }
+                        const allIngs = [];
+                        recipes.forEach(r => r.ingredients.forEach(i => { if (i.name.toLowerCase() === ing.name.toLowerCase() && r.id !== snackId) allIngs.push(i); }));
+                        const matched = allIngs[0];
+                        const unit = matched?.unit || ing.unit || "whole";
+                        const snackRecipeObj = { id: snackId, name: ing.name, types: ["Snack"], serves: 1, ingredients: [{ name: ing.name, qty: 1, unit, store: ing.store, category: ing.category || guessCategory(ing.name) }] };
+                        setRecipes(prev => {
+                          const exists = prev.find(r => r.id === snackId);
+                          if (exists) return prev.map(r => r.id === snackId ? snackRecipeObj : r);
+                          return [...prev, snackRecipeObj];
+                        });
                         setWeek(prev => ({ ...prev, [snackPickerFor.day]: { ...prev[snackPickerFor.day], [snackKey]: { mealId: snackId } } }));
                         setSnackPickerFor(null);
                       }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: isSelected ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${isSelected ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
