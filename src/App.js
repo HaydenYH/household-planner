@@ -316,7 +316,7 @@ function IngredientAutocomplete({ value, onChange, onSelectFull, recipes, extraI
     }));
     (extraIngredients || []).forEach(i => {
       if (i.name.trim() && !seen.has(i.name.toLowerCase())) {
-        seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: "", category: i.category || guessCategory(i.name) });
+        seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: i.unit || "", category: i.category || guessCategory(i.name) });seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: "", category: i.category || guessCategory(i.name) });
       }
     });
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -1529,7 +1529,11 @@ return (
                         const snackId = `snack-ing-${ing.name.toLowerCase().replace(/\s+/g, "-")}`;
                         const existingRecipe = recipes.find(r => r.id === snackId);
                         if (!existingRecipe) {
-                          setRecipes(prev => [...prev, { id: snackId, name: ing.name, types: ["Snack"], serves: 1, ingredients: [{ name: ing.name, qty: 1, unit: ing.unit || "whole", store: ing.store, category: ing.category || guessCategory(ing.name) }] }]);
+                          const allIngs = [];
+                          recipes.forEach(r => r.ingredients.forEach(i => { if (i.name.toLowerCase() === ing.name.toLowerCase()) allIngs.push(i); }));
+                          const matched = allIngs[0];
+                          const unit = matched?.unit || ing.unit || "whole";
+                          setRecipes(prev => [...prev, { id: snackId, name: ing.name, types: ["Snack"], serves: 1, ingredients: [{ name: ing.name, qty: 1, unit, store: ing.store, category: ing.category || guessCategory(ing.name) }] }]);
                         }
                         setWeek(prev => ({ ...prev, [snackPickerFor.day]: { ...prev[snackPickerFor.day], [snackKey]: { mealId: snackId } } }));
                         setSnackPickerFor(null);
