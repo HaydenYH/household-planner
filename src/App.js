@@ -465,6 +465,7 @@ const [recipes, setRecipes, recipesReady] = useSharedState("recipes", DEFAULT_RE
 const [week, setWeek, weekReady] = useSharedState(getWeekKey(weekStart), defaultWeek);
 const [shoppingList, setShoppingList, shopReady] = useSharedState("shopping", []);
 const [goals, setGoals, goalsReady] = useSharedState("goals", buildEmptyGoals());
+const [standaloneIngredients, setStandaloneIngredients] = useSharedState("ingredients", []);
 
 const [pickerFor, setPickerFor] = useState(null);
 const [pickerLeftovers, setPickerLeftovers] = useState(false);
@@ -478,6 +479,8 @@ const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
 const [newGoalMember, setNewGoalMember] = useState(null);
 const [mealChangeTrigger, setMealChangeTrigger] = useState(0);
+const [showAddIngredient, setShowAddIngredient] = useState(false);
+const [newIngredient, setNewIngredient] = useState({ name: "", store: "Woolworths", category: "Other" });
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
@@ -846,8 +849,17 @@ return (
           allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
         }
       }));
+      (standaloneIngredients || []).forEach(i => {
+        if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+          allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+        }
+      });
       return (
         <div>
+          <button className="btn" onClick={() => setShowAddIngredient(true)}
+            style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 14 }}>
+            + New Ingredient
+          </button>
           {CATEGORIES.filter(cat => allIngredients.some(i => i.category === cat)).map(cat => (
             <div key={cat} style={{ marginBottom: 16 }}>
               <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 8 }}>
@@ -1264,6 +1276,48 @@ return (
   onSave={saveEditedRecipe}
   onClose={() => setEditingRecipe(null)}
 />
+    </div>
+  )}
+
+{/* ── Add Ingredient Modal ── */}
+  {showAddIngredient && (
+    <div className="overlay" onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", store: "Woolworths", category: "Other" }); }}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>New Ingredient</h2>
+          <button onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", store: "Woolworths", category: "Other" }); }}
+            style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Name</div>
+          <input value={newIngredient.name} onChange={e => setNewIngredient(p => ({ ...p, name: e.target.value, category: guessCategory(e.target.value) }))}
+            placeholder="e.g. Olive Oil" style={{ width: "100%" }} autoFocus />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Store</div>
+          <select value={newIngredient.store} onChange={e => setNewIngredient(p => ({ ...p, store: e.target.value }))} style={{ width: "100%" }}>
+            {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Category</div>
+          <select value={newIngredient.category} onChange={e => setNewIngredient(p => ({ ...p, category: e.target.value }))} style={{ width: "100%" }}>
+            {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICONS[c]} {c}</option>)}
+          </select>
+        </div>
+        <button className="btn" onClick={() => {
+          const name = newIngredient.name.trim();
+          if (!name) return;
+          const exists = (standaloneIngredients || []).find(i => i.name.toLowerCase() === name.toLowerCase());
+          if (!exists) {
+            setStandaloneIngredients(prev => [...(Array.isArray(prev) ? prev : []), { name, store: newIngredient.store, category: newIngredient.category || guessCategory(name) }]);
+          }
+          setShowAddIngredient(false);
+          setNewIngredient({ name: "", store: "Woolworths", category: "Other" });
+        }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
+          Save Ingredient
+        </button>
+      </div>
     </div>
   )}
 
