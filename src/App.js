@@ -853,15 +853,6 @@ return (
           {!loaded && <span className="dm pulse" style={{ fontSize: 9, color: "#c8a96e" }}>syncing...</span>}
           {loaded && !notConfigured && <span className="dm" style={{ fontSize: 9, color: "#4caf50" }}>● live</span>}
         </div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-          {MEMBERS.map(m => (
-            <button key={m} onClick={() => setActiveUser(activeUser === m ? null : m)}
-              className="dm"
-              style={{ fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 100, border: `1.5px solid ${activeUser === m ? MEMBER_COLORS[m] : "#2a2824"}`, background: activeUser === m ? MEMBER_COLORS[m] : "transparent", color: activeUser === m ? "#0c0c0a" : "#555", cursor: "pointer", transition: "all .15s" }}>
-              {m}
-            </button>
-          ))}
-        </div>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: "-.02em" }}>
           {view === "week" ? "Weekly Planner" : view === "day" ? FULL_DAYS[selectedDay] : view === "recipes" ? "Recipe Book" : view === "shopping" ? "Shopping List" : "Weekly Goals"}
         </h1>
@@ -879,7 +870,7 @@ return (
           </div>
         )}
       </div>
-      {(view === "week" || view === "day") && mealsPlanned > 0 && (
+      {view === "week" && mealsPlanned > 0 && (
         <button className="btn" onClick={generateShoppingList} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>🛒 Shop</button>
       )}
     </div>
@@ -1014,72 +1005,6 @@ return (
           </div>
         );
       })}
-{/* ── Daily Macro Summary ── */}
-      {(() => {
-        let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFibre = 0, totalSugar = 0;
-        let hasMacros = false;
-        MEAL_TYPES.forEach(mt => {
-          const slot = week[DAYS[selectedDay]]?.[mt];
-          if (!slot?.mealId) return;
-          const recipe = recipes.find(r => r.id === slot.mealId);
-          if (!recipe) return;
-          const m = calcMacrosForRecipe(recipe);
-          if (!m) return;
-          const perServe = { cal: m.cal / (recipe.serves || 1), protein: m.protein / (recipe.serves || 1), carbs: m.carbs / (recipe.serves || 1), fat: m.fat / (recipe.serves || 1), fibre: m.fibre / (recipe.serves || 1), sugar: m.sugar / (recipe.serves || 1) };
-          totalCal += perServe.cal;
-          totalProtein += perServe.protein;
-          totalCarbs += perServe.carbs;
-          totalFat += perServe.fat;
-          totalFibre += perServe.fibre;
-          totalSugar += perServe.sugar;
-          hasMacros = true;
-        });
-        const snackMembers = activeUser ? [activeUser] : MEMBERS;
-        snackMembers.forEach(member => {
-          const snackKey = `snack_${member}`;
-          const slot = week[DAYS[selectedDay]]?.[snackKey];
-          if (!slot?.mealId) return;
-          const recipe = recipes.find(r => r.id === slot.mealId);
-          if (!recipe) return;
-          const m = calcMacrosForRecipe(recipe);
-          if (!m) return;
-          totalCal += m.cal;
-          totalProtein += m.protein;
-          totalCarbs += m.carbs;
-          totalFat += m.fat;
-          totalFibre += m.fibre;
-          totalSugar += m.sugar;
-          hasMacros = true;
-        });
-        if (!hasMacros) return null;
-        return (
-          <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: "#c8a96e33" }}>
-            <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 10 }}>
-              📊 Daily Totals
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 12 }}>
-              <span style={{ fontSize: 28, fontWeight: 700, color: "#c8a96e", fontFamily: "DM Sans, sans-serif" }}>{Math.round(totalCal)}</span>
-              <span className="dm" style={{ fontSize: 12, color: "#555" }}>calories</span>
-            </div>
-            <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-              {[["Protein", totalProtein, "#5c9fe0"], ["Carbs", totalCarbs, "#c8a96e"], ["Fat", totalFat, "#a78bca"]].map(([label, val, color]) => (
-                <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 10, padding: "8px 10px", border: `1px solid ${color}33` }}>
-                  <div className="dm" style={{ fontSize: 16, fontWeight: 700, color }}>{Math.round(val)}g</div>
-                  <div className="dm" style={{ fontSize: 10, color: "#555" }}>{label}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {[["Fibre", totalFibre], ["Sugar", totalSugar]].map(([label, val]) => (
-                <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 10, padding: "6px 10px", border: "1px solid #252320" }}>
-                  <div className="dm" style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{Math.round(val)}g</div>
-                  <div className="dm" style={{ fontSize: 10, color: "#444" }}>{label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
 
     {/* ── Snack Cards ── */}
       {MEMBERS.filter(m => !activeUser || m === activeUser).map(member => {
@@ -1105,12 +1030,91 @@ return (
                   const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
                   return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name}</span>;
                 })}
-                {snackRecipe.ingredients.length > 4 && <span className="dm" style={{ fontSize: 10, color: "#555", padding: "2px 4px" }}>+{snackRecipe.ingredients.length - 4} more</span>}
               </div>
             )}
           </div>
         );
       })}
+
+      {/* ── Daily Macro Summary ── */}
+      {(() => {
+        let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFibre = 0, totalSugar = 0;
+        let hasMacros = false;
+        MEAL_TYPES.forEach(mt => {
+          const slot = week[DAYS[selectedDay]]?.[mt];
+          if (!slot?.mealId) return;
+          const recipe = recipes.find(r => r.id === slot.mealId);
+          if (!recipe) return;
+          const m = calcMacrosForRecipe(recipe);
+          if (!m) return;
+          const perServe = { cal: m.cal / (recipe.serves || 1), protein: m.protein / (recipe.serves || 1), carbs: m.carbs / (recipe.serves || 1), fat: m.fat / (recipe.serves || 1), fibre: m.fibre / (recipe.serves || 1), sugar: m.sugar / (recipe.serves || 1) };
+          totalCal += perServe.cal;
+          totalProtein += perServe.protein;
+          totalCarbs += perServe.carbs;
+          totalFat += perServe.fat;
+          totalFibre += perServe.fibre;
+          totalSugar += perServe.sugar;
+          hasMacros = true;
+        });
+        if (activeUser) {
+          const snackKey = `snack_${activeUser}`;
+          const slot = week[DAYS[selectedDay]]?.[snackKey];
+          if (slot?.mealId) {
+            const recipe = recipes.find(r => r.id === slot.mealId);
+            if (recipe) {
+              const m = calcMacrosForRecipe(recipe);
+              if (m) {
+                totalCal += m.cal;
+                totalProtein += m.protein;
+                totalCarbs += m.carbs;
+                totalFat += m.fat;
+                totalFibre += m.fibre;
+                totalSugar += m.sugar;
+                hasMacros = true;
+              }
+            }
+          }
+        }
+        return (
+          <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: "#c8a96e33" }}>
+            <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 10 }}>
+              📊 Daily Totals
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <select value={activeUser || ""} onChange={e => setActiveUser(e.target.value || null)} style={{ width: "100%", fontSize: 14, padding: "9px 13px", background: "#0c0c0a", border: "1.5px solid #252320", borderRadius: 10, color: "#ede8d8", cursor: "pointer" }}>
+                <option value="">Select Person's View to see daily macro totals</option>
+                {MEMBERS.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            {activeUser && hasMacros && (
+              <>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 12 }}>
+                  <span style={{ fontSize: 28, fontWeight: 700, color: "#c8a96e", fontFamily: "DM Sans, sans-serif" }}>{Math.round(totalCal)}</span>
+                  <span className="dm" style={{ fontSize: 12, color: "#555" }}>calories</span>
+                </div>
+                <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
+                  {[["Protein", totalProtein, "#5c9fe0"], ["Carbs", totalCarbs, "#c8a96e"], ["Fat", totalFat, "#a78bca"]].map(([label, val, color]) => (
+                    <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 10, padding: "8px 10px", border: `1px solid ${color}33` }}>
+                      <div className="dm" style={{ fontSize: 16, fontWeight: 700, color }}>{Math.round(val)}g</div>
+                      <div className="dm" style={{ fontSize: 10, color: "#555" }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[["Fibre", totalFibre], ["Sugar", totalSugar]].map(([label, val]) => (
+                    <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 10, padding: "6px 10px", border: "1px solid #252320" }}>
+                      <div className="dm" style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{Math.round(val)}g</div>
+                      <div className="dm" style={{ fontSize: 10, color: "#444" }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
     </div>
   )}
 
