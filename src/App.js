@@ -589,6 +589,7 @@ const [selectedSnackIng, setSelectedSnackIng] = useState(null);
 const [snackQty, setSnackQty] = useState(1);
 const [snackUnit, setSnackUnit] = useState("");
 const [ingredientMacroPopup, setIngredientMacroPopup] = useState(null);
+const [editingMacros, setEditingMacros] = useState({ cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" });
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
@@ -1159,6 +1160,29 @@ return (
             style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 14 }}>
             + New Ingredient
           </button>
+          {(() => {
+            const allIngredients = [];
+            recipes.forEach(r => r.ingredients.forEach(i => {
+              if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+                allIngredients.push({ name: i.name });
+              }
+            }));
+            (standaloneIngredients || []).forEach(i => {
+              if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+                allIngredients.push({ name: i.name });
+              }
+            });
+            const missing = allIngredients.filter(i => !getMacros(i.name, standaloneIngredients));
+            if (missing.length === 0) return null;
+            return (
+              <div style={{ background: "#2a1a0a", border: "1px solid #c87c3e55", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                <div className="dm" style={{ fontSize: 12, color: "#c87c3e", fontWeight: 700, marginBottom: 6 }}>⚠️ Missing macros</div>
+                <div className="dm" style={{ fontSize: 11, color: "#888", lineHeight: 1.7 }}>
+                  {missing.map(i => i.name).join(", ")}
+                </div>
+              </div>
+            );
+          })()}
           {CATEGORIES.filter(cat => allIngredients.some(i => i.category === cat)).map(cat => (
             <div key={cat} style={{ marginBottom: 16 }}>
               <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 8 }}>
@@ -1168,11 +1192,16 @@ return (
                 {allIngredients.filter(i => i.category === cat).sort((a,b) => a.name.localeCompare(b.name)).map((ing, idx, arr) => {
                   const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
                   return (
-                    <div key={ing.name} onClick={() => { const m = getMacros(ing.name); if (m) setIngredientMacroPopup({ name: ing.name, ...m }); }}
+                    <div key={ing.name} onClick={() => {
+  const m = getMacros(ing.name, standaloneIngredients);
+  const macros = m || { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" };
+  setIngredientMacroPopup({ name: ing.name, ...macros });
+  setEditingMacros({ cal: macros.cal ?? "", protein: macros.protein ?? "", carbs: macros.carbs ?? "", fat: macros.fat ?? "", fibre: macros.fibre ?? "", sugar: macros.sugar ?? "" });
+}}
                       style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none", cursor: getMacros(ing.name) ? "pointer" : "default" }}>
-                      <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
+                      <span className="dm" style={{ fontSize: 13, fontWeight: 500, color: getMacros(ing.name, standaloneIngredients) ? "#ede8d8" : "#c87c3e" }}>{ing.name}</span>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        {getMacros(ing.name) && <span className="dm" style={{ fontSize: 10, color: "#c8a96e" }}>{getMacros(ing.name).cal} cal</span>}
+                        {getMacros(ing.name, standaloneIngredients) ? <span className="dm" style={{ fontSize: 10, color: "#c8a96e" }}>{getMacros(ing.name, standaloneIngredients).cal} cal</span> : <span className="dm" style={{ fontSize: 10, color: "#c87c3e" }}>No macros</span>}
                         <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
                       </div>
                     </div>
@@ -1755,26 +1784,38 @@ return (
           <button onClick={() => setIngredientMacroPopup(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
         </div>
         <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 16 }}>
-          <span style={{ fontSize: 32, fontWeight: 700, color: "#c8a96e", fontFamily: "DM Sans, sans-serif" }}>{ingredientMacroPopup.cal}</span>
-          <span className="dm" style={{ fontSize: 13, color: "#555" }}>calories</span>
-        </div>
-        <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-          {[["Protein", ingredientMacroPopup.protein, "#5c9fe0"], ["Carbs", ingredientMacroPopup.carbs, "#c8a96e"], ["Fat", ingredientMacroPopup.fat, "#a78bca"]].map(([label, val, color]) => (
-            <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 12, padding: "12px 10px", border: `1px solid ${color}33` }}>
-              <div className="dm" style={{ fontSize: 20, fontWeight: 700, color }}>{val}g</div>
-              <div className="dm" style={{ fontSize: 11, color: "#555" }}>{label}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+          {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
+            <div key={key}>
+              <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>{label}</div>
+              <input type="number" min="0" value={editingMacros[key] ?? ""} onChange={e => setEditingMacros(p => ({ ...p, [key]: e.target.value }))}
+                placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          {[["Fibre", ingredientMacroPopup.fibre], ["Sugar", ingredientMacroPopup.sugar]].map(([label, val]) => (
-            <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 12, padding: "10px", border: "1px solid #252320" }}>
-              <div className="dm" style={{ fontSize: 16, fontWeight: 600, color: "#666" }}>{val}g</div>
-              <div className="dm" style={{ fontSize: 11, color: "#444" }}>{label}</div>
-            </div>
-          ))}
-        </div>
+        <button className="btn" onClick={() => {
+          const name = ingredientMacroPopup.name;
+          const parsedMacros = {
+            cal: parseFloat(editingMacros.cal) || 0,
+            protein: parseFloat(editingMacros.protein) || 0,
+            carbs: parseFloat(editingMacros.carbs) || 0,
+            fat: parseFloat(editingMacros.fat) || 0,
+            fibre: parseFloat(editingMacros.fibre) || 0,
+            sugar: parseFloat(editingMacros.sugar) || 0,
+          };
+          setStandaloneIngredients(prev => {
+            const list = Array.isArray(prev) ? prev : [];
+            const exists = list.find(i => i.name.toLowerCase() === name.toLowerCase());
+            if (exists) {
+              return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, macros: parsedMacros } : i);
+            } else {
+              return [...list, { name, store: "Woolworths", category: guessCategory(name), macros: parsedMacros }];
+            }
+          });
+          setIngredientMacroPopup(null);
+        }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
+          Save Macros
+        </button>
       </div>
     </div>
   )}
