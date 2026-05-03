@@ -476,6 +476,7 @@ const [compactShopping, setCompactShopping] = useState(false);
 const [shoppingListSnapshot, setShoppingListSnapshot] = useState(null);
 const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
+const [newGoalMember, setNewGoalMember] = useState(null);
 const [mealChangeTrigger, setMealChangeTrigger] = useState(0);
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
