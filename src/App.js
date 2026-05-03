@@ -504,7 +504,11 @@ function mergeGeneratedShoppingList(generated, existing = []) {
     };
   });
   const customItems = (Array.isArray(existing) ? existing : []).filter(item => String(item.id).startsWith("custom-") && !generatedIds.has(item.id));
-  return [...merged, ...customItems];
+  const result = [...merged, ...customItems];
+  // If no meals are planned at all, only keep custom items
+  if (generated.length === 0) return customItems;
+  return result;
+}
 }
 
 // ── Meal actions ──────────────────────────────────────────────────────────
