@@ -618,11 +618,9 @@ setGoals(prev => ({ ...prev, [member]: prev[member].filter(g => g.id !== goalId)
 }
 useEffect(() => {
   if (mealChangeTrigger === 0) return;
-  if (shoppingListRef.current.length > 0) {
-    const updated = buildShoppingListFromWeek(week, recipesRef.current);
-    console.log("Auto-updating shopping list, items:", updated.length);
-    setShoppingList(updated);
-  }
+  const updated = buildShoppingListFromWeek(week, recipesRef.current);
+  console.log("Auto-updating shopping list, items:", updated.length);
+  setShoppingList(updated);
 }, [mealChangeTrigger]);
 
 const mealsPlanned = DAYS.reduce((acc, d) => acc + MEAL_TYPES.filter(m => week[d]?.[m]?.mealId).length, 0);
