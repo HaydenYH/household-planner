@@ -453,6 +453,8 @@ const [newGoalText, setNewGoalText] = useState("");
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
 const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
+const shoppingListRef = useRef(safeShoppingList);
+useEffect(() => { shoppingListRef.current = safeShoppingList; }, [safeShoppingList]);
 
 // ── Meal actions ──────────────────────────────────────────────────────────
 function toggleAttending(day, mealType, member) {
@@ -470,7 +472,7 @@ function setMeal(day, mealType, recipeId, leftovers = false) {
       const nextDay = DAYS[(dayIndex + 1) % 7];
       newWeek[nextDay] = { ...newWeek[nextDay], Lunch: { ...newWeek[nextDay].Lunch, mealId: recipeId, leftovers: true } };
     }
-    if (safeShoppingList.length > 0) {
+     if (shoppingListRef.current.length > 0) {
       const updatedList = buildShoppingListFromWeek(newWeek, recipes);
       setShoppingList(updatedList);
     }
