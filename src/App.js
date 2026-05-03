@@ -103,6 +103,26 @@ const MEAL_ICONS = {
   Lunch: "🥪",
   Dinner: "🍽️",
 };
+const CATEGORIES = ["Meat", "Bread / Dairy", "Vegetables", "Freezer", "Soft Drinks", "Other"];
+
+const CATEGORY_ICONS = {
+  "Meat": "🥩",
+  "Bread / Dairy": "🥛",
+  "Vegetables": "🥦",
+  "Freezer": "❄️",
+  "Soft Drinks": "🥤",
+  "Other": "📦",
+};
+
+function guessCategory(name) {
+  const n = name.toLowerCase();
+  if (/chicken|beef|pork|lamb|bacon|mince|steak|fish|salmon|tuna|prawn|turkey|sausage/.test(n)) return "Meat";
+  if (/milk|yoghurt|cream|cheese|butter|egg|oat|bread|pasta|rice|flour|cereal|protein powder/.test(n)) return "Bread / Dairy";
+  if (/lettuce|spinach|tomato|cucumber|onion|garlic|broccoli|broccolini|carrot|capsicum|zucchini|potato|bean|corn|pea|mushroom|celery|kale|cabbage|herb|ginger|lemon|lime|avocado|banana|blueberr|berry|fruit|vegetable|salad/.test(n)) return "Vegetables";
+  if (/frozen|ice cream/.test(n)) return "Freezer";
+  if (/juice|drink|soda|water|cola|lemonade|cordial/.test(n)) return "Soft Drinks";
+  return "Other";
+}
 
 const UNIT_CONVERSIONS = {
   g: { kg: 0.001, g: 1 },
@@ -175,39 +195,39 @@ function getQuantitySummary(quantities) {
 
 const DEFAULT_RECIPES = [
   { id: 1, name: "Banana Overnight Oats", types: ["Breakfast"], serves: 3, ingredients: [
-    { name: "Light Greek Yoghurt", qty: 240, unit: "g", store: "Aldi" },
-    { name: "Rolled Oats", qty: 75, unit: "g", store: "Woolworths" },
-    { name: "Black Chia Seeds", qty: 30, unit: "g", store: "Costco" },
-    { name: "Chocolate Protein Powder", qty: 3, unit: "scoops", store: "Costco" },
-    { name: "Almond Milk", qty: 300, unit: "ml", store: "Aldi" },
-    { name: "Banana", qty: 1.5, unit: "whole", store: "Woolworths" },
-    { name: "Frozen Blueberries", qty: 90, unit: "g", store: "Aldi" },
+{ name: "Light Greek Yoghurt", qty: 240, unit: "g", store: "Aldi", category: "Bread / Dairy" },
+    { name: "Rolled Oats", qty: 75, unit: "g", store: "Woolworths", category: "Bread / Dairy" },
+    { name: "Black Chia Seeds", qty: 30, unit: "g", store: "Costco", category: "Other" },
+    { name: "Chocolate Protein Powder", qty: 3, unit: "scoops", store: "Costco", category: "Bread / Dairy" },
+    { name: "Almond Milk", qty: 300, unit: "ml", store: "Aldi", category: "Bread / Dairy" },
+    { name: "Banana", qty: 1.5, unit: "whole", store: "Woolworths", category: "Vegetables" },
+    { name: "Frozen Blueberries", qty: 90, unit: "g", store: "Aldi", category: "Freezer" },
   ]},
   { id: 2, name: "Pesto Pasta", types: ["Lunch", "Dinner"], serves: 3, ingredients: [
-    { name: "Brown Onion", qty: 0.5, unit: "whole", store: "Woolworths" },
-    { name: "Green Pesto", qty: 0.5, unit: "jar", store: "Woolworths" },
-    { name: "Light Thickened Cream", qty: 150, unit: "ml", store: "Woolworths" },
-    { name: "Bacon", qty: 150, unit: "g", store: "Costco" },
-    { name: "Broccolini", qty: 1, unit: "whole", store: "Woolworths" },
-    { name: "High Protein Pasta", qty: 0.5, unit: "packet", store: "Woolworths" },
-    { name: "Chicken Breast", qty: 500, unit: "g", store: "Costco" },
+  { name: "Brown Onion", qty: 0.5, unit: "whole", store: "Woolworths", category: "Vegetables" },
+    { name: "Green Pesto", qty: 0.5, unit: "jar", store: "Woolworths", category: "Other" },
+    { name: "Light Thickened Cream", qty: 150, unit: "ml", store: "Woolworths", category: "Bread / Dairy" },
+    { name: "Bacon", qty: 150, unit: "g", store: "Costco", category: "Meat" },
+    { name: "Broccolini", qty: 1, unit: "whole", store: "Woolworths", category: "Vegetables" },
+    { name: "High Protein Pasta", qty: 0.5, unit: "packet", store: "Woolworths", category: "Bread / Dairy" },
+    { name: "Chicken Breast", qty: 500, unit: "g", store: "Costco", category: "Meat" },
   ]},
   { id: 3, name: "Green Curry", types: ["Lunch", "Dinner"], serves: 3, ingredients: [
-    { name: "Green Curry Paste", qty: 0.5, unit: "jar", store: "Woolworths" },
-    { name: "Brown Sugar", qty: 0.5, unit: "tbsp", store: "Aldi" },
-    { name: "Green Beans", qty: 150, unit: "g", store: "Woolworths" },
-    { name: "Low Carb Potato", qty: 188, unit: "g", store: "Woolworths" },
-    { name: "Chicken Breast", qty: 500, unit: "g", store: "Costco" },
-    { name: "Coconut Milk", qty: 1, unit: "cans", store: "Woolworths" },
+{ name: "Green Curry Paste", qty: 0.5, unit: "jar", store: "Woolworths", category: "Other" },
+    { name: "Brown Sugar", qty: 0.5, unit: "tbsp", store: "Aldi", category: "Other" },
+    { name: "Green Beans", qty: 150, unit: "g", store: "Woolworths", category: "Vegetables" },
+    { name: "Low Carb Potato", qty: 188, unit: "g", store: "Woolworths", category: "Vegetables" },
+    { name: "Chicken Breast", qty: 500, unit: "g", store: "Costco", category: "Meat" },
+    { name: "Coconut Milk", qty: 1, unit: "cans", store: "Woolworths", category: "Other" },
   ]},
   { id: 4, name: "Chicken Taco Bowls", types: ["Lunch"], serves: 3, ingredients: [
-    { name: "Lebanese Cucumber", qty: 1.33, unit: "whole", store: "Woolworths" },
-    { name: "Chicken Breast", qty: 533, unit: "g", store: "Costco" },
-    { name: "Rice", qty: 300, unit: "g", store: "Woolworths" },
-    { name: "Black Beans", qty: 150, unit: "g", store: "Aldi" },
-    { name: "Corn", qty: 167, unit: "g", store: "Aldi" },
-    { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Aldi" },
-    { name: "Cherry Tomatoes", qty: 167, unit: "g", store: "Woolworths" },
+{ name: "Lebanese Cucumber", qty: 1.33, unit: "whole", store: "Woolworths", category: "Vegetables" },
+    { name: "Chicken Breast", qty: 533, unit: "g", store: "Costco", category: "Meat" },
+    { name: "Rice", qty: 300, unit: "g", store: "Woolworths", category: "Bread / Dairy" },
+    { name: "Black Beans", qty: 150, unit: "g", store: "Aldi", category: "Other" },
+    { name: "Corn", qty: 167, unit: "g", store: "Aldi", category: "Vegetables" },
+    { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Aldi", category: "Bread / Dairy" },
+    { name: "Cherry Tomatoes", qty: 167, unit: "g", store: "Woolworths", category: "Vegetables" },
   ]},
 ];
 
@@ -286,7 +306,7 @@ function IngredientAutocomplete({ value, onChange, onSelectFull, recipes }) {
     const seen = new Map();
     (recipes || []).forEach(r => r.ingredients.forEach(i => {
       if (i.name.trim() && !seen.has(i.name.toLowerCase())) {
-        seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: i.unit });
+        seen.set(i.name.toLowerCase(), { name: i.name, store: i.store, unit: i.unit, category: i.category || guessCategory(i.name) });
       }
     }));
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -380,9 +400,9 @@ return (
         <IngredientAutocomplete
   value={ing.name}
   onChange={val => updateIng(idx, "name", val)}
-  onSelectFull={item => {
+onSelectFull={item => {
     const a = [...draft.ingredients];
-    a[idx] = { ...a[idx], name: item.name, store: item.store || a[idx].store };
+    a[idx] = { ...a[idx], name: item.name, store: item.store || a[idx].store, category: item.category || guessCategory(item.name) };
     setDraft(p => ({ ...p, ingredients: a }));
   }}
   recipes={recipes}
@@ -410,6 +430,12 @@ return (
         </select>
         <button onClick={() => removeIng(idx)}
           style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>×</button>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <select value={ing.category || guessCategory(ing.name)} onChange={e => updateIng(idx, "category", e.target.value)}
+          style={{ width: "100%", fontSize: 12, padding: "6px 10px" }}>
+          {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICONS[c]} {c}</option>)}
+        </select>
       </div>
       {ing.unit === "custom" && (
         <input value={ing.customUnit || ""} onChange={e => updateIng(idx, "customUnit", e.target.value)} placeholder="Custom unit" style={{ width: "100%" }} />
@@ -448,7 +474,7 @@ const [showAddShoppingItem, setShowAddShoppingItem] = useState(false);
 const [newShoppingItem, setNewShoppingItem] = useState({ name: "", qty: "", unit: "", store: "Woolworths" });
 const [compactShopping, setCompactShopping] = useState(false);
 const [shoppingListSnapshot, setShoppingListSnapshot] = useState(null);
-const [newGoalMember, setNewGoalMember] = useState(null);
+const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
 const [mealChangeTrigger, setMealChangeTrigger] = useState(0);
 
@@ -549,6 +575,7 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
             quantities: [],
           };
         }
+       consolidated[key].category = ing.category || guessCategory(ing.name);
         consolidated[key].quantities.push({ qty: ing.qty * scale, unit: ing.unit || "" });
       });
     });
@@ -795,11 +822,53 @@ return (
   {/* ── Recipes View ── */}
 {view === "recipes" && (
   <div style={{ padding: "14px" }} className="fadeIn">
+    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+      <button className="btn" onClick={() => setRecipeTab("recipes")}
+        style={{ flex: 1, padding: "10px", background: recipeTab === "recipes" ? "#c8a96e" : "#1e1c18", color: recipeTab === "recipes" ? "#0c0c0a" : "#888" }}>
+        📖 Recipes
+      </button>
+      <button className="btn" onClick={() => setRecipeTab("ingredients")}
+        style={{ flex: 1, padding: "10px", background: recipeTab === "ingredients" ? "#c8a96e" : "#1e1c18", color: recipeTab === "ingredients" ? "#0c0c0a" : "#888" }}>
+        🧺 Ingredients
+      </button>
+    </div>
+    {recipeTab === "recipes" && (
     <button className="btn" onClick={() => setShowAddRecipe(true)}
       style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 14 }}>
       + New Recipe
     </button>
-    {MEAL_TYPES.map(mt => {
+    )}
+    {recipeTab === "ingredients" && (() => {
+      const allIngredients = [];
+      recipes.forEach(r => r.ingredients.forEach(i => {
+        if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+          allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+        }
+      }));
+      return (
+        <div>
+          {CATEGORIES.filter(cat => allIngredients.some(i => i.category === cat)).map(cat => (
+            <div key={cat} style={{ marginBottom: 16 }}>
+              <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 8 }}>
+                {CATEGORY_ICONS[cat]} {cat}
+              </div>
+              <div style={{ background: "#161512", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
+                {allIngredients.filter(i => i.category === cat).sort((a,b) => a.name.localeCompare(b.name)).map((ing, idx, arr) => {
+                  const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
+                  return (
+                    <div key={ing.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none" }}>
+                      <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
+                      <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    })()}
+    {recipeTab === "recipes" && MEAL_TYPES.map(mt => {
       const filtered = recipes.filter(r => (r.types || [r.type]).includes(mt));
       if (!filtered.length) return null;
       return (
@@ -879,7 +948,12 @@ return (
                 <span className="dm" style={{ fontSize: 11, color: sc.accent, opacity: .6 }}>{remaining === 0 ? "✓ done" : `${remaining} left`}</span>
               </div>
               <div style={{ background: "#161512", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
-                {items.map((item, idx) => {
+                {CATEGORIES.filter(cat => items.some(i => (i.category || guessCategory(i.name)) === cat)).map(cat => (
+                  <div key={cat}>
+                    <div style={{ padding: "6px 14px", background: "#1a1814", borderBottom: "1px solid #252320" }}>
+                      <span className="dm" style={{ fontSize: 10, color: "#888", fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>{CATEGORY_ICONS[cat]} {cat}</span>
+                    </div>
+                    {items.filter(i => (i.category || guessCategory(i.name)) === cat).map((item, idx, arr) => {
                   // Calculate how much to buy after pantry
                   const totals = getQuantitySummary(item.quantities);
                   const pantryQty = parseFloat(item.pantryQty) || 0;
@@ -970,6 +1044,8 @@ return (
                     </div>
                   );
                 })}
+                  </div>
+                ))}
               </div>
             </div>
           );
