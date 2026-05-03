@@ -824,12 +824,7 @@ return (
                   Edit
                 </button>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                {r.ingredients.map((ing, idx) => {
-                  const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
-                  return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name} · {ing.qty}{ing.unit ? ` ${ing.unit}` : ""}</span>;
-                })}
-              </div>
+              
             </div>
           ))}
         </div>
