@@ -603,7 +603,7 @@ const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
 const [newGoalMember, setNewGoalMember] = useState(null);
 const [showAddIngredient, setShowAddIngredient] = useState(false);
-const [newIngredient, setNewIngredient] = useState({ name: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } });
+const [newIngredient, setNewIngredient] = useState({ name: "", brand: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } });
 const [activeUser, setActiveUser] = useState(null);
 const [snackPickerFor, setSnackPickerFor] = useState(null);
 const [snackSearch, setSnackSearch] = useState("");
@@ -1228,7 +1228,10 @@ return (
   setEditingMacros({ cal: macros.cal ?? "", protein: macros.protein ?? "", carbs: macros.carbs ?? "", fat: macros.fat ?? "", fibre: macros.fibre ?? "", sugar: macros.sugar ?? "" });
 }}
                       style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none", cursor: "pointer" }}>
-                      <span className="dm" style={{ fontSize: 13, fontWeight: 500, color: getMacros(ing.name, standaloneIngredients) ? "#ede8d8" : "#c87c3e" }}>{ing.name}</span>
+                      <div>
+  <span className="dm" style={{ fontSize: 13, fontWeight: 500, color: getMacros(ing.name, standaloneIngredients) ? "#ede8d8" : "#c87c3e" }}>{ing.name}</span>
+  {ing.brand && <span className="dm" style={{ fontSize: 10, color: "#555", marginLeft: 6 }}>{ing.brand}</span>}
+</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         {getMacros(ing.name, standaloneIngredients) ? <span className="dm" style={{ fontSize: 10, color: "#c8a96e" }}>{getMacros(ing.name, standaloneIngredients).cal} cal</span> : <span className="dm" style={{ fontSize: 10, color: "#c87c3e" }}>No macros</span>}
                         <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
@@ -1675,11 +1678,11 @@ return (
 
 {/* ── Add Ingredient Modal ── */}
   {showAddIngredient && (
-    <div className="overlay" onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } }); }}>
+    <div className="overlay" onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", brand: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } }); }}>
       <div className="sheet" onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <h2 style={{ margin: 0, fontSize: 18 }}>New Ingredient</h2>
-          <button onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } }); }}
+          <button onClick={() => { setShowAddIngredient(false); setNewIngredient({ name: "", brand: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } }); }}
             style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
         </div>
         <div style={{ marginBottom: 12 }}>
@@ -1705,6 +1708,10 @@ return (
           })()}
         </div>
         <div style={{ marginBottom: 12 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Brand <span style={{ color: "#444" }}>(optional)</span></div>
+          <input value={newIngredient.brand || ""} onChange={e => setNewIngredient(p => ({ ...p, brand: e.target.value }))} placeholder="e.g. Optimum Nutrition" style={{ width: "100%" }} />
+        </div>
+        <div style={{ marginBottom: 12 }}>
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Store</div>
           <select value={newIngredient.store} onChange={e => setNewIngredient(p => ({ ...p, store: e.target.value }))} style={{ width: "100%" }}>
             {STORES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -1721,42 +1728,7 @@ return (
         <div style={{ marginBottom: 16 }}>
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Macros per 100g</div>
           
-          {/* Open Food Facts Search */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input
-                value={newIngredient._offSearch || newIngredient.name || ""}
-                onChange={e => setNewIngredient(p => ({ ...p, _offSearch: e.target.value }))}
-                placeholder="Search food database..."
-                style={{ flex: 1 }}
-              />
-              <button className="btn" onClick={async () => {
-                const query = newIngredient._offSearch || newIngredient.name;
-                if (!query?.trim()) return;
-                setNewIngredient(p => ({ ...p, _offSearching: true, _offResults: [] }));
-                try {
-                  const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10&fields=product_name,brands,nutriments,serving_size&cc=au&lc=en`);
-                  const data = await res.json();
-                  const results = (data.products || []).filter(p => p.product_name && p.nutriments).map(p => ({
-                    name: p.product_name,
-                    brand: p.brands || "",
-                    cal: Math.round(p.nutriments["energy-kcal_100g"] || p.nutriments["energy_100g"] / 4.184 || 0),
-                    protein: Math.round((p.nutriments["proteins_100g"] || 0) * 10) / 10,
-                    carbs: Math.round((p.nutriments["carbohydrates_100g"] || 0) * 10) / 10,
-                    fat: Math.round((p.nutriments["fat_100g"] || 0) * 10) / 10,
-                    fibre: Math.round((p.nutriments["fiber_100g"] || 0) * 10) / 10,
-                    sugar: Math.round((p.nutriments["sugars_100g"] || 0) * 10) / 10,
-                  }));
-                  setNewIngredient(p => ({ ...p, _offSearching: false, _offResults: results }));
-                } catch (err) {
-                  setNewIngredient(p => ({ ...p, _offSearching: false, _offResults: [] }));
-                }
-              }} style={{ padding: "9px 14px", background: "#1a2a3a", color: "#5c9fe0", border: "1px solid #5c9fe044", whiteSpace: "nowrap" }}>
-                {newIngredient._offSearching ? "⏳" : "🔍 Search"}
-              </button>
-            </div>
-
-            {/* Results list */}
+                      {/* Results list */}
             {(newIngredient._offResults || []).length > 0 && (
               <div style={{ background: "#0c0c0a", border: "1px solid #252320", borderRadius: 10, maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
                 {newIngredient._offResults.map((item, idx) => (
@@ -1812,10 +1784,10 @@ return (
             sugar: parseFloat(macros.sugar) || 0,
           } : null;
           if (!exists) {
-            setStandaloneIngredients(prev => [...(Array.isArray(prev) ? prev : []), { name, store: newIngredient.store, category: newIngredient.category || guessCategory(name), ...(parsedMacros ? { macros: parsedMacros } : {}) }]);
+            setStandaloneIngredients(prev => [...(Array.isArray(prev) ? prev : []), { name, brand: newIngredient.brand?.trim() || "", store: newIngredient.store, category: newIngredient.category || guessCategory(name), ...(parsedMacros ? { macros: parsedMacros } : {}) }]);
           }
           setShowAddIngredient(false);
-          setNewIngredient({ name: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } });
+          setNewIngredient({ name: "", brand: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } });
         }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
           Save Ingredient
         </button>
