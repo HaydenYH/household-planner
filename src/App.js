@@ -683,6 +683,10 @@ const [ingredientMacroPopup, setIngredientMacroPopup] = useState(null);
 const [viewingRecipe, setViewingRecipe] = useState(null);
 const [viewingRecipeTab, setViewingRecipeTab] = useState("ingredients");
 const [showBackToTop, setShowBackToTop] = useState(false);
+const [sidesPickerFor, setSidesPickerFor] = useState(null);
+const [sidesSearch, setSidesSearch] = useState("");
+const [showMissingMacrosOnly, setShowMissingMacrosOnly] = useState(false);
+
 useEffect(() => {
   const handleScroll = () => setShowBackToTop(window.scrollY > 200);
   window.addEventListener("scroll", handleScroll);
@@ -820,6 +824,27 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
         }
        consolidated[key].category = ing.category || guessCategory(ing.name);
         consolidated[key].quantities.push({ qty: ing.qty * scale, unit: ing.unit || "" });
+      });
+      // Add sides to shopping list
+      (slot.sides || []).forEach(side => {
+        if (side.type === "recipe") {
+          const sideRecipe = currentRecipes.find(r => r.id === side.id);
+          if (!sideRecipe) return;
+          sideRecipe.ingredients.forEach(ing => {
+            const store = ing.store || "Woolworths";
+            const key = `${ing.name.toLowerCase()}-${store}`;
+            if (!consolidated[key]) consolidated[key] = { id: key, name: ing.name, store, checked: false, pantryQty: 0, pantryUnit: ing.unit || "", quantities: [] };
+            consolidated[key].category = ing.category || guessCategory(ing.name);
+            consolidated[key].quantities.push({ qty: ing.qty / (sideRecipe.serves || 1), unit: ing.unit || "" });
+          });
+        } else {
+          const ingDetails = [...recipes.flatMap(r => r.ingredients), ...(standaloneIngredients || [])].find(i => i.name.toLowerCase() === side.name.toLowerCase());
+          const store = ingDetails?.store || "Woolworths";
+          const key = `${side.name.toLowerCase()}-${store}`;
+          if (!consolidated[key]) consolidated[key] = { id: key, name: side.name, store, checked: false, pantryQty: 0, pantryUnit: side.unit || "", quantities: [] };
+          consolidated[key].category = ingDetails?.category || guessCategory(side.name);
+          consolidated[key].quantities.push({ qty: parseFloat(side.qty) || 0, unit: side.unit || "" });
+        }
       });
     });
 
@@ -1074,12 +1099,51 @@ return (
             )}
             {recipe && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18" }}>
+                {/* Sides */}
+                {(week[DAYS[selectedDay]]?.[mt]?.sides || []).length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    {(week[DAYS[selectedDay]][mt].sides || []).map((side, idx) => (
+                      <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 0" }}>
+                        <span className="dm" style={{ fontSize: 12, color: "#888" }}>+ {side.name} <span style={{ color: "#555" }}>{side.qty} {side.unit}</span></span>
+                        <button onClick={() => {
+                          setWeek(prev => ({
+                            ...prev,
+                            [DAYS[selectedDay]]: {
+                              ...prev[DAYS[selectedDay]],
+                              [mt]: { ...prev[DAYS[selectedDay]][mt], sides: (prev[DAYS[selectedDay]][mt].sides || []).filter((_, i) => i !== idx) }
+                            }
+                          }));
+                        }} style={{ background: "none", border: "none", color: "#444", fontSize: 14, cursor: "pointer", padding: "0 2px" }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button className="dm" onClick={() => { setSidesPickerFor({ day: DAYS[selectedDay], mealType: mt }); setSidesSearch(""); }}
+                  style={{ fontSize: 11, color: "#5c9fe0", background: "none", border: "none", cursor: "pointer", padding: "0 0 8px 0" }}>
+                  + Add side
+                </button>
                 {(() => {
                   const m = calcMacrosForRecipe(recipe);
+                  const sides = week[DAYS[selectedDay]]?.[mt]?.sides || [];
+                  let extraCal = 0, extraProtein = 0, extraCarbs = 0, extraFat = 0;
+                  sides.forEach(side => {
+                    if (side.type === "recipe") {
+                      const sideRecipe = recipes.find(r => r.id === side.id);
+                      if (sideRecipe) {
+                        const sm = calcMacrosForRecipe(sideRecipe);
+                        if (sm) { extraCal += sm.cal / (sideRecipe.serves || 1); extraProtein += sm.protein / (sideRecipe.serves || 1); extraCarbs += sm.carbs / (sideRecipe.serves || 1); extraFat += sm.fat / (sideRecipe.serves || 1); }
+                      }
+                    } else {
+                      const ing = getMacros(side.name, standaloneIngredients);
+                      if (ing) {
+                        const grams = getGramsForUnit(side.name, side.unit, parseFloat(side.qty) || 0);
+                        if (grams !== null) { const scale = grams / 100; extraCal += ing.cal * scale; extraProtein += ing.protein * scale; extraCarbs += ing.carbs * scale; extraFat += ing.fat * scale; }
+                      }
+                    }
+                  });
                   if (!m) return null;
                   const serves = recipe.serves || 1;
-                  const attending = week[DAYS[selectedDay]]?.[mt]?.attending?.length || 1;
-                  const perPerson = { cal: Math.round(m.cal / serves), carbs: Math.round(m.carbs / serves), fat: Math.round(m.fat / serves), protein: Math.round(m.protein / serves) };
+                  const perPerson = { cal: Math.round(m.cal / serves + extraCal), carbs: Math.round(m.carbs / serves + extraCarbs), fat: Math.round(m.fat / serves + extraFat), protein: Math.round(m.protein / serves + extraProtein) };
                   return (
                     <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 6, borderTop: "1px solid #1e1c18" }}>
                       <span className="dm" style={{ fontSize: 16, fontWeight: 700, color: "#c8a96e" }}>{perPerson.cal}</span>
@@ -1284,7 +1348,15 @@ return (
             if (missing.length === 0) return null;
             return (
               <div style={{ background: "#2a1a0a", border: "1px solid #c87c3e55", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-                <div className="dm" style={{ fontSize: 12, color: "#c87c3e", fontWeight: 700, marginBottom: 6 }}>⚠️ Missing macros</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                  <div className="dm" style={{ fontSize: 12, color: "#c87c3e", fontWeight: 700 }}>⚠️ {missing.length} missing macros</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }} onClick={() => setShowMissingMacrosOnly(p => !p)}>
+                    <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${showMissingMacrosOnly ? "#c87c3e" : "#555"}`, background: showMissingMacrosOnly ? "#c87c3e" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {showMissingMacrosOnly && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0c0c0a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                    <span className="dm" style={{ fontSize: 11, color: showMissingMacrosOnly ? "#c87c3e" : "#555" }}>Show missing only</span>
+                  </div>
+                </div>
                 <div className="dm" style={{ fontSize: 11, color: "#888", lineHeight: 1.7 }}>
                   {missing.map(i => i.name).join(", ")}
                 </div>
@@ -1297,7 +1369,7 @@ return (
                 {CATEGORY_ICONS[cat]} {cat}
               </div>
               <div style={{ background: "#161512", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
-                {allIngredients.filter(i => i.category === cat).sort((a,b) => a.name.localeCompare(b.name)).map((ing, idx, arr) => {
+                {allIngredients.filter(i => i.category === cat && (!showMissingMacrosOnly || !getMacros(i.name, standaloneIngredients))).sort((a,b) => a.name.localeCompare(b.name)).map((ing, idx, arr) => {
                   const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
                   return (
                     <div key={ing.name} onClick={() => {
@@ -2133,6 +2205,126 @@ setWeek(prev => {
               ))}
               {filtered.length === 0 && (
                 <div className="dm" style={{ textAlign: "center", padding: 24, color: "#444", fontSize: 13 }}>No ingredients found</div>
+              )}
+            </>
+          );
+        })()}
+      </div>
+    </div>
+  )}
+
+  {/* ── Sides Picker Modal ── */}
+  {sidesPickerFor && (
+    <div className="overlay" onClick={() => { setSidesPickerFor(null); setSelectedSnackIng(null); }}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>+ Add Side</h2>
+          <button onClick={() => { setSidesPickerFor(null); setSelectedSnackIng(null); }} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
+        </div>
+        <input value={sidesSearch} onChange={e => setSidesSearch(e.target.value)} placeholder="Search ingredients or recipes..." style={{ width: "100%", marginBottom: 14 }} autoFocus />
+        {(() => {
+          const allIngredients = [];
+          recipes.forEach(r => r.ingredients.forEach(i => {
+            if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+              allIngredients.push({ type: "ingredient", name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+            }
+          }));
+          (standaloneIngredients || []).forEach(i => {
+            if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+              allIngredients.push({ type: "ingredient", name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+            }
+          });
+          const allRecipes = recipes.filter(r => !r.id?.toString().startsWith("snack-ing-"));
+          const filteredIngs = sidesSearch.trim().length > 0 ? allIngredients.filter(i => i.name.toLowerCase().includes(sidesSearch.toLowerCase())) : allIngredients;
+          const filteredRecipes = sidesSearch.trim().length > 0 ? allRecipes.filter(r => r.name.toLowerCase().includes(sidesSearch.toLowerCase())) : allRecipes;
+          return (
+            <>
+              {filteredRecipes.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 6 }}>📖 Recipes</div>
+                  {filteredRecipes.map(r => (
+                    <div key={r.id}>
+                      <div onClick={() => setSelectedSnackIng({ type: "recipe", id: r.id, name: r.name })}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: selectedSnackIng?.id === r.id ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${selectedSnackIng?.id === r.id ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
+                        <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{r.name}</span>
+                        <span className="dm" style={{ fontSize: 11, color: "#555" }}>serves {r.serves}</span>
+                      </div>
+                      {selectedSnackIng?.id === r.id && (
+                        <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
+                          <button className="btn" onClick={() => {
+                            setWeek(prev => ({
+                              ...prev,
+                              [sidesPickerFor.day]: {
+                                ...prev[sidesPickerFor.day],
+                                [sidesPickerFor.mealType]: {
+                                  ...prev[sidesPickerFor.day][sidesPickerFor.mealType],
+                                  sides: [...(prev[sidesPickerFor.day][sidesPickerFor.mealType].sides || []), { type: "recipe", id: r.id, name: r.name, qty: 1, unit: "serve" }]
+                                }
+                              }
+                            }));
+                            setSidesPickerFor(null); setSelectedSnackIng(null);
+                          }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", width: "100%" }}>
+                            Add 1 serve of {r.name}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {CATEGORIES.filter(cat => filteredIngs.some(i => i.category === cat)).map(cat => (
+                <div key={cat} style={{ marginBottom: 14 }}>
+                  <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 6 }}>{CATEGORY_ICONS[cat]} {cat}</div>
+                  {filteredIngs.filter(i => i.category === cat).sort((a,b) => a.name.localeCompare(b.name)).map(ing => {
+                    const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
+                    return (
+                      <div key={ing.name}>
+                        <div onClick={() => { setSelectedSnackIng({ type: "ingredient", name: ing.name }); setSnackQty(100); setSnackUnit("g"); }}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: selectedSnackIng?.name === ing.name && selectedSnackIng?.type === "ingredient" ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${selectedSnackIng?.name === ing.name && selectedSnackIng?.type === "ingredient" ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
+                          <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
+                          <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                        </div>
+                        {selectedSnackIng?.name === ing.name && selectedSnackIng?.type === "ingredient" && (
+                          <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
+                            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>How much?</div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                              <input type="number" value={snackQty} onChange={e => setSnackQty(parseFloat(e.target.value) || 0)} style={{ width: 80 }} min="0" />
+                              <select value={snackUnit} onChange={e => setSnackUnit(e.target.value)} style={{ flex: 1 }}>
+                                <option value="g">g</option>
+                                <option value="kg">kg</option>
+                                <option value="ml">ml</option>
+                                <option value="L">L</option>
+                                <option value="cups">cups</option>
+                                <option value="tbsp">tbsp</option>
+                                <option value="tsp">tsp</option>
+                                <option value="whole">whole</option>
+                                <option value="slices">slices</option>
+                              </select>
+                            </div>
+                            <button className="btn" onClick={() => {
+                              setWeek(prev => ({
+                                ...prev,
+                                [sidesPickerFor.day]: {
+                                  ...prev[sidesPickerFor.day],
+                                  [sidesPickerFor.mealType]: {
+                                    ...prev[sidesPickerFor.day][sidesPickerFor.mealType],
+                                    sides: [...(prev[sidesPickerFor.day][sidesPickerFor.mealType].sides || []), { type: "ingredient", name: ing.name, qty: snackQty, unit: snackUnit }]
+                                  }
+                                }
+                              }));
+                              setSidesPickerFor(null); setSelectedSnackIng(null);
+                            }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", width: "100%" }}>
+                              Add Side
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {filteredIngs.length === 0 && filteredRecipes.length === 0 && (
+                <div className="dm" style={{ textAlign: "center", padding: 24, color: "#444", fontSize: 13 }}>No results found</div>
               )}
             </>
           );
