@@ -1485,7 +1485,7 @@ return (
       });
       return (
         <div>
-          <div style={{ position: "sticky", top: 158, zIndex: 89, background: "#0c0c0a", paddingBottom: 10, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 4, borderBottom: "1px solid #1a1814", marginBottom: 14, boxShadow: "0 8px 16px #0c0c0a" }}>
+          <div style={{ position: "sticky", top: 0, zIndex: 89, background: "#0c0c0a", paddingBottom: 10, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 10, borderBottom: "1px solid #1a1814", marginBottom: 14, boxShadow: "0 8px 24px #0c0c0a" }}>
             <button className="btn" onClick={() => setShowAddIngredient(true)}
               style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 8 }}>
               + New Ingredient
