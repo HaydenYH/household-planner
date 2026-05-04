@@ -589,6 +589,7 @@ const [selectedSnackIng, setSelectedSnackIng] = useState(null);
 const [snackQty, setSnackQty] = useState(1);
 const [snackUnit, setSnackUnit] = useState("");
 const [ingredientMacroPopup, setIngredientMacroPopup] = useState(null);
+const [viewingRecipe, setViewingRecipe] = useState(null);
 const [editingMacros, setEditingMacros] = useState({ cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" });
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
@@ -838,7 +839,7 @@ for (let i = 0; i < safeShoppingList.length; i++) {
 // ── Render ─────────────────────────────────────────────────────────────────
 return (
 <div style={{ fontFamily: "'Playfair Display', Georgia, serif", background: "#0c0c0a", minHeight: "100vh", color: "#ede8d8", maxWidth: 480, margin: "0 auto", paddingBottom: 84 }}>
-<style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap'); *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;} ::-webkit-scrollbar{display:none;} body{background:#0c0c0a;} .dm{font-family:'DM Sans',sans-serif;} .btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;border:none;border-radius:100px;cursor:pointer;transition:all .15s;} .card{background:#161512;border-radius:18px;border:1px solid #252320;transition:border-color .2s;} .card:hover{border-color:#353230;} .chip{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:4px 11px;border-radius:100px;cursor:pointer;transition:all .15s;border:1.5px solid transparent;} .chip.on{background:#c8a96e;color:#0c0c0a;border-color:#c8a96e;} .chip.off{background:transparent;color:#555;border-color:#2a2824;} .meal-pill{font-family:'DM Sans',sans-serif;font-size:12px;background:#1e1c18;color:#c8a96e;border:1px solid #c8a96e33;border-radius:100px;padding:4px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;} .nav-btn{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:100px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;} .nav-btn.active{background:#c8a96e1a;color:#c8a96e;} .nav-btn.inactive{color:#444;} .overlay{position:fixed;inset:0;background:#0c0c0aee;z-index:200;display:flex;align-items:flex-end;} .sheet{background:#161512;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px;border-top:1px solid #252320;} input,select{background:#0c0c0a;border:1.5px solid #252320;border-radius:10px;color:#ede8d8;padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;-webkit-appearance:none;} input:focus,select:focus{border-color:#c8a96e55;} select option{background:#161512;} .day-tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:100px;border:none;cursor:pointer;transition:all .15s;} .day-tab.active{background:#c8a96e;color:#0c0c0a;} .day-tab.inactive{background:#1a1814;color:#666;} .fadeIn{animation:fadeIn .2s ease;} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} .pulse{animation:pulse 1.5s infinite;} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}} .check-box{width:22px;height:22px;border-radius:7px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;} .goal-day-btn{font-family:'DM Sans',sans-serif;font-size:9px;font-weight:700;width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}`}</style>
+<style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap'); *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;} ::-webkit-scrollbar{display:none;} body{background:#0c0c0a;} .dm{font-family:'DM Sans',sans-serif;} .btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;border:none;border-radius:100px;cursor:pointer;transition:all .15s;} .card{background:#161512;border-radius:18px;border:1px solid #252320;transition:border-color .2s;} .card:hover{border-color:#353230;} .chip{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:4px 11px;border-radius:100px;cursor:pointer;transition:all .15s;border:1.5px solid transparent;} .chip.on{background:#c8a96e;color:#0c0c0a;border-color:#c8a96e;} .chip.off{background:transparent;color:#555;border-color:#2a2824;} .meal-pill{font-family:'DM Sans',sans-serif;font-size:12px;background:#1e1c18;color:#c8a96e;border:1px solid #c8a96e33;border-radius:100px;padding:4px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;} .nav-btn{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:100px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;} .nav-btn.active{background:#c8a96e1a;color:#c8a96e;} .nav-btn.inactive{color:#444;} .overlay{position:fixed;inset:0;background:#0c0c0aee;z-index:200;display:flex;align-items:flex-end;} .sheet{background:#161512;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px;border-top:1px solid #252320;} input,select{background:#0c0c0a;border:1.5px solid #252320;border-radius:10px;color:#ede8d8;padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;-webkit-appearance:none;} input:focus,select:focus{border-color:#c8a96e55;} input,select,textarea{font-size:16px!important;} select option{background:#161512;} .day-tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:100px;border:none;cursor:pointer;transition:all .15s;} .day-tab.active{background:#c8a96e;color:#0c0c0a;} .day-tab.inactive{background:#1a1814;color:#666;} .fadeIn{animation:fadeIn .2s ease;} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} .pulse{animation:pulse 1.5s infinite;} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}} .check-box{width:22px;height:22px;border-radius:7px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;} .goal-day-btn{font-family:'DM Sans',sans-serif;font-size:9px;font-weight:700;width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}`}</style>
 
 
   {/* ── Setup Banner ── */}
@@ -1222,7 +1223,7 @@ return (
             {MEAL_ICONS[mt]} {mt}
           </div>
           {filtered.map(r => (
-            <div className="card" key={r.id} style={{ marginBottom: 8, padding: "14px 16px" }}>
+            <div className="card" key={r.id} style={{ marginBottom: 8, padding: "14px 16px", cursor: "pointer" }} onClick={() => setViewingRecipe(r)}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>{r.name}</span>
@@ -1246,39 +1247,12 @@ return (
   })()}
 </div>
                 </div>
-                <button className="btn" onClick={() => setEditingRecipe({ ...r, types: r.types || [r.type], ingredients: processIngredientsForEdit(r.ingredients.map(i => ({ ...i, qty: i.qty || 0, unit: i.unit || "", customUnit: "" }))) })}
+                <button className="btn" onClick={e => { e.stopPropagation(); setEditingRecipe({ ...r, types: r.types || [r.type], ingredients: processIngredientsForEdit(r.ingredients.map(i => ({ ...i, qty: i.qty || 0, unit: i.unit || "", customUnit: "" }))) }); }}
                   style={{ background: "#1e2a3a", color: "#5c9fe0", padding: "5px 11px", fontSize: 10 }}>
                   Edit
                 </button>
               </div>
-              {(() => {
-                const m = calcMacrosForRecipe(r);
-                if (!m) return null;
-                const perServe = { cal: Math.round(m.cal / (r.serves || 1)), carbs: Math.round(m.carbs / (r.serves || 1)), fat: Math.round(m.fat / (r.serves || 1)), protein: Math.round(m.protein / (r.serves || 1)), fibre: Math.round(m.fibre / (r.serves || 1)), sugar: Math.round(m.sugar / (r.serves || 1)) };
-                return (
-                  <div style={{ borderTop: "1px solid #1e1c18", paddingTop: 10, marginTop: 4 }}>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
-                      <span className="dm" style={{ fontSize: 18, fontWeight: 700, color: "#c8a96e" }}>{perServe.cal}</span>
-                      <span className="dm" style={{ fontSize: 10, color: "#555" }}>cal / serve</span>
-                      <span className="dm" style={{ fontSize: 10, color: "#444", marginLeft: 4 }}>(total {m.cal})</span>
-                    </div>
-                    <div style={{ display: "flex", gap: 10 }}>
-                      {[["P", perServe.protein, "#5c9fe0"], ["C", perServe.carbs, "#c8a96e"], ["F", perServe.fat, "#a78bca"]].map(([label, val, color]) => (
-                        <div key={label} className="dm" style={{ fontSize: 11, color }}>
-                          <span style={{ fontWeight: 700 }}>{val}g</span> <span style={{ color: "#555" }}>{label}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                      {[["Fibre", perServe.fibre], ["Sugar", perServe.sugar]].map(([label, val]) => (
-                        <div key={label} className="dm" style={{ fontSize: 10, color: "#444" }}>
-                          {val}g <span style={{ color: "#333" }}>{label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+              
             </div>
           ))}
         </div>
@@ -1788,6 +1762,72 @@ return (
       </div>
     </div>
   )}
+{/* ── Recipe View Modal ── */}
+  {viewingRecipe && (
+    <div className="overlay" onClick={() => setViewingRecipe(null)}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>{viewingRecipe.name}</h2>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => { setEditingRecipe({ ...viewingRecipe, types: viewingRecipe.types || [viewingRecipe.type], ingredients: processIngredientsForEdit(viewingRecipe.ingredients.map(i => ({ ...i, qty: i.qty || 0, unit: i.unit || "", customUnit: "" }))) }); setViewingRecipe(null); }}
+              style={{ background: "#1e2a3a", border: "none", color: "#5c9fe0", borderRadius: 100, padding: "6px 14px", cursor: "pointer", fontFamily: "DM Sans, sans-serif", fontSize: 11, fontWeight: 600 }}>Edit</button>
+            <button onClick={() => setViewingRecipe(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
+          </div>
+        </div>
+        <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Serves {viewingRecipe.serves || "?"}</div>
+
+        {/* Macros */}
+        {(() => {
+          const m = calcMacrosForRecipe(viewingRecipe);
+          if (!m) return null;
+          const ps = { cal: Math.round(m.cal / (viewingRecipe.serves || 1)), protein: Math.round(m.protein / (viewingRecipe.serves || 1)), carbs: Math.round(m.carbs / (viewingRecipe.serves || 1)), fat: Math.round(m.fat / (viewingRecipe.serves || 1)), fibre: Math.round(m.fibre / (viewingRecipe.serves || 1)), sugar: Math.round(m.sugar / (viewingRecipe.serves || 1)) };
+          return (
+            <div style={{ background: "#0c0c0a", borderRadius: 12, padding: "14px", marginBottom: 16, border: "1px solid #252320" }}>
+              <div className="dm" style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Per serve</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
+                <span style={{ fontSize: 28, fontWeight: 700, color: "#c8a96e", fontFamily: "DM Sans, sans-serif" }}>{ps.cal}</span>
+                <span className="dm" style={{ fontSize: 12, color: "#555" }}>calories</span>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                {[["Protein", ps.protein, "#5c9fe0"], ["Carbs", ps.carbs, "#c8a96e"], ["Fat", ps.fat, "#a78bca"]].map(([label, val, color]) => (
+                  <div key={label} style={{ flex: 1, background: "#161512", borderRadius: 8, padding: "8px", border: `1px solid ${color}33` }}>
+                    <div className="dm" style={{ fontSize: 15, fontWeight: 700, color }}>{val}g</div>
+                    <div className="dm" style={{ fontSize: 10, color: "#555" }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[["Fibre", ps.fibre], ["Sugar", ps.sugar]].map(([label, val]) => (
+                  <div key={label} style={{ flex: 1, background: "#161512", borderRadius: 8, padding: "6px 8px", border: "1px solid #252320" }}>
+                    <div className="dm" style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>{val}g</div>
+                    <div className="dm" style={{ fontSize: 10, color: "#444" }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Ingredients */}
+        <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Ingredients</div>
+        <div style={{ background: "#0c0c0a", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
+          {viewingRecipe.ingredients.map((ing, idx) => {
+            const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
+            return (
+              <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < viewingRecipe.ingredients.length - 1 ? "1px solid #1a1814" : "none" }}>
+                <span className="dm" style={{ fontSize: 13 }}>{ing.name}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="dm" style={{ fontSize: 12, color: "#888" }}>{ing.qty} {ing.unit}</span>
+                  <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  )}
+
   {/* ── Ingredient Macro Popup ── */}
   {ingredientMacroPopup && (
     <div className="overlay" onClick={() => setIngredientMacroPopup(null)}>
