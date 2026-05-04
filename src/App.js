@@ -959,32 +959,24 @@ return (
         const recipe = recipes.find(r => r.id === mealId);
         return (
           <div className="card" key={mt} style={{ marginBottom: 12, padding: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>{MEAL_ICONS[mt]}</span>
-                <span style={{ fontWeight: 700, fontSize: 16 }}>{mt}</span>
-                <button className="meal-pill" onClick={() => { setPickerFor({ day: DAYS[selectedDay], mealType: mt }); setPickerLeftovers(week[DAYS[selectedDay]][mt].leftovers || false); }}>
-                  {recipe ? recipe.name : "+ Add meal"}
-                </button>
-              </div>
-              {recipe && (
-                <div style={{ display: "flex", gap: 3 }}>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 20 }}>{MEAL_ICONS[mt]}</span>
+                  <span style={{ fontWeight: 700, fontSize: 16 }}>{mt}</span>
+                </div>
+                <div style={{ display: "flex", gap: 5 }}>
                   {MEMBERS.map(m => (
-                    <span key={m} className="dm" style={{ width: 20, height: 20, borderRadius: "50%", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", background: attending.includes(m) ? MEMBER_COLORS[m] : "#1e1c18", color: attending.includes(m) ? "#0c0c0a" : "#444", border: `1px solid ${attending.includes(m) ? MEMBER_COLORS[m] : "#2a2824"}`, transition: "all .15s" }}>{MEMBER_INITIALS[m]}</span>
+                    <span key={m} className="dm" onClick={() => toggleAttending(DAYS[selectedDay], mt, m)} style={{ width: 32, height: 32, borderRadius: "50%", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", background: attending.includes(m) ? MEMBER_COLORS[m] : "#1e1c18", color: attending.includes(m) ? "#0c0c0a" : "#444", border: `1px solid ${attending.includes(m) ? MEMBER_COLORS[m] : "#2a2824"}`, transition: "all .15s", cursor: "pointer" }}>{MEMBER_INITIALS[m]}</span>
                   ))}
                 </div>
-              )}
+              </div>
+              <button className="meal-pill" onClick={() => { setPickerFor({ day: DAYS[selectedDay], mealType: mt }); setPickerLeftovers(week[DAYS[selectedDay]][mt].leftovers || false); }}
+                style={{ width: "100%", maxWidth: "100%", textAlign: "left" }}>
+                {recipe ? recipe.name : "+ Add meal"}
+              </button>
             </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {MEMBERS.map(member => (
-                <button key={member} className={`chip ${attending.includes(member) ? "on" : "off"}`}
-                  style={attending.includes(member) ? { background: MEMBER_COLORS[member], borderColor: MEMBER_COLORS[member] } : {}}
-                  onClick={() => toggleAttending(DAYS[selectedDay], mt, member)}>
-                  {member}
-                </button>
-              ))}
-            </div>
-            {recipe && mt !== "Lunch" && (
+                        {recipe && mt !== "Lunch" && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18", display: "flex", alignItems: "center", gap: 8 }}>
                 <div onClick={() => {
                   const current = week[DAYS[selectedDay]][mt].leftovers || false;
