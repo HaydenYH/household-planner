@@ -201,6 +201,12 @@ function calcMacrosForRecipe(recipe) {
       hasAny = true;
     }
   });
+  if (recipe.cookedInOil) {
+    const serves = recipe.serves || 1;
+    cal += 40 * serves;
+    fat += 4.5 * serves;
+    hasAny = true;
+  }
   if (!hasAny) return null;
   return { cal: Math.round(cal), carbs: Math.round(carbs), fat: Math.round(fat), protein: Math.round(protein), fibre: Math.round(fibre), sugar: Math.round(sugar) };
 }
@@ -544,6 +550,16 @@ return (
       )}
     </div>
   ))}
+  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, padding: "12px 14px", background: "#0c0c0a", borderRadius: 10, border: "1px solid #252320" }}>
+    <div onClick={() => setDraft(p => ({ ...p, cookedInOil: !p.cookedInOil }))}
+      style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${draft.cookedInOil ? "#c8a96e" : "#555"}`, background: draft.cookedInOil ? "#c8a96e" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      {draft.cookedInOil && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0c0c0a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+    </div>
+    <div>
+      <div className="dm" style={{ fontSize: 13, color: draft.cookedInOil ? "#ede8d8" : "#666" }}>Cooked in olive oil</div>
+      <div className="dm" style={{ fontSize: 11, color: "#555" }}>Adds ~40 cal, 4.5g fat per serve</div>
+    </div>
+  </div>
   <button className="btn" onClick={() => setDraft(p => ({ ...p, ingredients: [...p.ingredients, { name: "", qty: 0, unit: "", store: "Woolworths", customUnit: "" }] }))}
     style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 14 }}>
     + Add ingredient
@@ -1627,7 +1643,7 @@ return (
       <RecipeForm
   title="New Recipe"
   recipes={recipes}
-  initial={{ name: "", types: ["Dinner"], serves: 4, ingredients: [{ name: "", qty: 0, unit: "", store: "Woolworths", customUnit: "" }] }}
+  initial={{ name: "", types: ["Dinner"], serves: 4, cookedInOil: false, ingredients: [{ name: "", qty: 0, unit: "", store: "Woolworths", customUnit: "" }] }}
   onSave={saveNewRecipe}
   onClose={() => setShowAddRecipe(false)}
 />
@@ -1778,7 +1794,12 @@ return (
             <button onClick={() => setViewingRecipe(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
           </div>
         </div>
-        <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>Serves {viewingRecipe.serves || "?"}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+  <div className="dm" style={{ fontSize: 11, color: "#555" }}>Serves {viewingRecipe.serves || "?"}</div>
+  {viewingRecipe.cookedInOil && (
+    <span className="dm" style={{ fontSize: 10, background: "#2a1f0a", color: "#ff9800", border: "1px solid #ff980044", borderRadius: 100, padding: "2px 8px" }}>🫒 Cooked in olive oil</span>
+  )}
+</div>
 
         {/* Macros */}
         {(() => {
