@@ -1727,37 +1727,6 @@ return (
         {/* ── Macros section ── */}
         <div style={{ marginBottom: 16 }}>
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Macros per 100g</div>
-          
-                      {/* Results list */}
-            {(newIngredient._offResults || []).length > 0 && (
-              <div style={{ background: "#0c0c0a", border: "1px solid #252320", borderRadius: 10, maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
-                {newIngredient._offResults.map((item, idx) => (
-                  <div key={idx} onMouseDown={() => {
-                    setNewIngredient(p => ({
-                      ...p,
-                      name: p.name || item.name,
-                      _offResults: [],
-                      macros: { cal: item.cal, protein: item.protein, carbs: item.carbs, fat: item.fat, fibre: item.fibre, sugar: item.sugar }
-                    }));
-                  }} style={{ padding: "10px 12px", borderBottom: idx < newIngredient._offResults.length - 1 ? "1px solid #1a1814" : "none", cursor: "pointer" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#1a1814"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <div className="dm" style={{ fontSize: 13, color: "#ede8d8", fontWeight: 500 }}>{item.name}</div>
-                    <div style={{ display: "flex", gap: 10, marginTop: 3 }}>
-                      {item.brand && <span className="dm" style={{ fontSize: 10, color: "#555" }}>{item.brand}</span>}
-                      <span className="dm" style={{ fontSize: 10, color: "#c8a96e" }}>{item.cal} cal</span>
-                      <span className="dm" style={{ fontSize: 10, color: "#5c9fe0" }}>{item.protein}g P</span>
-                      <span className="dm" style={{ fontSize: 10, color: "#a78bca" }}>{item.fat}g F</span>
-                      <span className="dm" style={{ fontSize: 10, color: "#888" }}>{item.carbs}g C</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {newIngredient._offSearching === false && (newIngredient._offResults || []).length === 0 && newIngredient._offSearch && (
-              <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 8 }}>No results — fill in macros manually below</div>
-            )}
-          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
             {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
               <div key={key}>
