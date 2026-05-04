@@ -1230,7 +1230,7 @@ return (
   {/* ── Recipes View ── */}
 {view === "recipes" && (
   <div style={{ padding: "14px" }} className="fadeIn">
-    <div style={{ position: "sticky", top: 88, zIndex: 90, background: "#0c0c0a", paddingBottom: 10, marginBottom: 4, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 10, borderBottom: "1px solid #1a1814" }}>
+    <div style={{ position: "sticky", top: 76, zIndex: 90, background: "#0c0c0a", paddingBottom: 10, marginBottom: 4, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 10, borderBottom: "1px solid #1a1814" }}>
     <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
       <button className="btn" onClick={() => setRecipeTab("recipes")}
         style={{ flex: 1, padding: "10px", background: recipeTab === "recipes" ? "#c8a96e" : "#1e1c18", color: recipeTab === "recipes" ? "#0c0c0a" : "#888" }}>
