@@ -2303,7 +2303,16 @@ setWeek(prev => {
                         </div>
                         {selectedSnackIng?.name === ing.name && selectedSnackIng?.type === "ingredient" && (
                           <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
-                            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Total qty for whole meal</div>
+                            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Total qty for whole meal</div>
+                            {(() => {
+                              const attending = week[sidesPickerFor.day]?.[sidesPickerFor.mealType]?.attending?.length || 1;
+                              const perPerson = snackQty > 0 ? parseFloat((snackQty / attending).toFixed(1)) : 0;
+                              return (
+                                <div className="dm" style={{ fontSize: 11, color: "#5c9fe0", marginBottom: 8 }}>
+                                  = {perPerson} {snackUnit} per person ({attending} attending)
+                                </div>
+                              );
+                            })()}
                             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                               <input type="number" value={snackQty} onChange={e => setSnackQty(parseFloat(e.target.value) || 0)} style={{ width: 80 }} min="0" />
                               <select value={snackUnit} onChange={e => setSnackUnit(e.target.value)} style={{ flex: 1 }}>
