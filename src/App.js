@@ -570,6 +570,25 @@ return (
     style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 14 }}>
     + Add ingredient
   </button>
+
+  <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8, marginTop: 4 }}>Cooking Steps</div>
+  {(draft.steps || []).map((step, idx) => (
+    <div key={idx} style={{ marginBottom: 8, display: "flex", gap: 8, alignItems: "flex-start" }}>
+      <div className="dm" style={{ width: 24, height: 24, borderRadius: "50%", background: "#c8a96e22", color: "#c8a96e", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 10 }}>{idx + 1}</div>
+      <textarea value={step} onChange={e => {
+        const steps = [...(draft.steps || [])];
+        steps[idx] = e.target.value;
+        setDraft(p => ({ ...p, steps }));
+      }} placeholder={`Step ${idx + 1}...`}
+        style={{ flex: 1, background: "#0c0c0a", border: "1.5px solid #252320", borderRadius: 10, color: "#ede8d8", padding: "9px 13px", fontFamily: "DM Sans, sans-serif", fontSize: 14, outline: "none", resize: "none", minHeight: 70 }} />
+      <button onClick={() => setDraft(p => ({ ...p, steps: (p.steps || []).filter((_, i) => i !== idx) }))}
+        style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", padding: "0 2px", marginTop: 8 }}>×</button>
+    </div>
+  ))}
+  <button className="btn" onClick={() => setDraft(p => ({ ...p, steps: [...(p.steps || []), ""] }))}
+    style={{ background: "#1e1c18", color: "#888", padding: "8px 16px", width: "100%", marginBottom: 14 }}>
+    + Add step
+  </button>
   <button className="btn" onClick={() => valid && onSave(draft)}
     style={{ background: valid ? "#c8a96e" : "#2a2824", color: valid ? "#0c0c0a" : "#555", padding: "13px 20px", width: "100%", cursor: valid ? "pointer" : "default" }}>
     Save Recipe
@@ -612,6 +631,7 @@ const [snackQty, setSnackQty] = useState(1);
 const [snackUnit, setSnackUnit] = useState("");
 const [ingredientMacroPopup, setIngredientMacroPopup] = useState(null);
 const [viewingRecipe, setViewingRecipe] = useState(null);
+const [viewingRecipeTab, setViewingRecipeTab] = useState("ingredients");
 const [editingMacros, setEditingMacros] = useState({ cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" });
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
@@ -1255,7 +1275,7 @@ return (
             {MEAL_ICONS[mt]} {mt}
           </div>
           {filtered.map(r => (
-            <div className="card" key={r.id} style={{ marginBottom: 8, padding: "14px 16px", cursor: "pointer" }} onClick={() => setViewingRecipe(r)}>
+            <div className="card" key={r.id} style={{ marginBottom: 8, padding: "14px 16px", cursor: "pointer" }} onClick={() => { setViewingRecipe(r); setViewingRecipeTab("ingredients"); }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>{r.name}</span>
@@ -1815,22 +1835,51 @@ return (
           );
         })()}
 
-        {/* Ingredients */}
-        <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Ingredients</div>
-        <div style={{ background: "#0c0c0a", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
-          {viewingRecipe.ingredients.map((ing, idx) => {
-            const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
-            return (
-              <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < viewingRecipe.ingredients.length - 1 ? "1px solid #1a1814" : "none" }}>
-                <span className="dm" style={{ fontSize: 13 }}>{ing.name}</span>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className="dm" style={{ fontSize: 12, color: "#888" }}>{ing.qty} {ing.unit}</span>
-                  <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
-                </div>
-              </div>
-            );
-          })}
+        {/* Tab toggle */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <button className="btn" onClick={() => setViewingRecipeTab("ingredients")}
+            style={{ flex: 1, padding: "9px", background: viewingRecipeTab === "ingredients" ? "#c8a96e" : "#1e1c18", color: viewingRecipeTab === "ingredients" ? "#0c0c0a" : "#888" }}>
+            🧺 Ingredients
+          </button>
+          <button className="btn" onClick={() => setViewingRecipeTab("steps")}
+            style={{ flex: 1, padding: "9px", background: viewingRecipeTab === "steps" ? "#c8a96e" : "#1e1c18", color: viewingRecipeTab === "steps" ? "#0c0c0a" : "#888" }}>
+            👨‍🍳 Steps
+          </button>
         </div>
+
+        {/* Ingredients tab */}
+        {viewingRecipeTab === "ingredients" && (
+          <div style={{ background: "#0c0c0a", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
+            {viewingRecipe.ingredients.map((ing, idx) => {
+              const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
+              return (
+                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < viewingRecipe.ingredients.length - 1 ? "1px solid #1a1814" : "none" }}>
+                  <span className="dm" style={{ fontSize: 13 }}>{ing.name}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className="dm" style={{ fontSize: 12, color: "#888" }}>{ing.qty} {ing.unit}</span>
+                    <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Steps tab */}
+        {viewingRecipeTab === "steps" && (
+          <div>
+            {(viewingRecipe.steps || []).length === 0 ? (
+              <div className="dm" style={{ textAlign: "center", padding: 32, color: "#444", fontSize: 13 }}>No steps added yet — tap Edit to add them</div>
+            ) : (
+              (viewingRecipe.steps || []).map((step, idx) => (
+                <div key={idx} style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+                  <div className="dm" style={{ width: 28, height: 28, borderRadius: "50%", background: "#c8a96e22", color: "#c8a96e", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>{idx + 1}</div>
+                  <div className="dm" style={{ fontSize: 14, color: "#ede8d8", lineHeight: 1.6, paddingTop: 4 }}>{step}</div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   )}
