@@ -1645,7 +1645,7 @@ return (
   {view === "recipes" && showBackToTop && (
     <button className="btn" onClick={() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }} style={{ position: "fixed", bottom: 90, right: 20, background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", zIndex: 150, boxShadow: "0 4px 12px #0c0c0a88" }}>
+    }} style={{ position: "fixed", bottom: 90, left: 20, background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", zIndex: 150, boxShadow: "0 4px 12px #0c0c0a88" }}>
       ↑ Top
     </button>
   )}
