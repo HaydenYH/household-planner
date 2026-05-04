@@ -78,6 +78,10 @@ ws.onmessage = (msg) => {
   } catch (_) {}
 };
 ws.onerror = (err) => console.warn("WebSocket error:", err);
+ws.onclose = () => {
+  console.warn("WebSocket closed, reconnecting in 3s...");
+  setTimeout(() => sb.subscribe(key, callback), 3000);
+};
 return () => { try { ws.close(); } catch (_) {} };
 } catch (err) {
 console.warn("WebSocket subscription failed:", err);
