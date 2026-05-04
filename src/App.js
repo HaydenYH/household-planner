@@ -104,14 +104,17 @@ const MEAL_ICONS = {
   Dinner: "🍽️",
   Snack: "🍎",
 };
-const CATEGORIES = ["Meat", "Bread / Dairy", "Vegetables", "Freezer", "Soft Drinks", "Other"];
+const CATEGORIES = ["Meat", "Bread / Dairy", "Pasta", "Vegetables", "Freezer", "Sauces & Spices", "Canned & Jarred", "Snacks & Treats", "Other"];
 
 const CATEGORY_ICONS = {
   "Meat": "🥩",
   "Bread / Dairy": "🥛",
+  "Pasta": "🍝",
   "Vegetables": "🥦",
   "Freezer": "❄️",
-  "Soft Drinks": "🥤",
+  "Sauces & Spices": "🫙",
+  "Canned & Jarred": "🥫",
+  "Snacks & Treats": "🍫",
   "Other": "📦",
 };
 
@@ -181,7 +184,7 @@ const GRAMS_PER_UNIT = {
   "zucchini":            { whole: 200 },
 };
 
-function getGramsForUnit(name, unit, qty) {
+function getGramsForUnit(name, unit, qty, standaloneIngs = []) {
   const n = name.toLowerCase();
   if (unit === "g") return qty;
   if (unit === "kg") return qty * 1000;
@@ -192,18 +195,22 @@ function getGramsForUnit(name, unit, qty) {
   if (unit === "cups") return qty * 240;
   const custom = GRAMS_PER_UNIT[n]?.[unit];
   if (custom) return qty * custom;
+  if (unit === "whole") {
+    const standalone = (standaloneIngs || []).find(i => i.name.toLowerCase() === n);
+    if (standalone?.gramsPerWhole) return qty * standalone.gramsPerWhole;
+  }
   return null;
 }
 
-function calcMacrosForRecipe(recipe) {
+function calcMacrosForRecipe(recipe, standaloneIngs = []) {
   let cal = 0, carbs = 0, fat = 0, protein = 0, fibre = 0, sugar = 0;
   let hasAny = false;
   (recipe.ingredients || []).forEach(ing => {
-    const m = getMacros(ing.name);
+    const m = getMacros(ing.name, standaloneIngs);
     if (!m) return;
     const qty = parseFloat(ing.qty) || 0;
     const unit = ing.unit || "";
-    const grams = getGramsForUnit(ing.name, unit, qty);
+    const grams = getGramsForUnit(ing.name, unit, qty, standaloneIngs);
     if (grams !== null) {
       const scale = grams / 100;
       cal += m.cal * scale;
@@ -228,10 +235,13 @@ function calcMacrosForRecipe(recipe) {
 function guessCategory(name) {
   const n = name.toLowerCase();
   if (/chicken|beef|pork|lamb|bacon|mince|steak|fish|salmon|tuna|prawn|turkey|sausage/.test(n)) return "Meat";
-  if (/milk|yoghurt|cream|cheese|butter|egg|oat|bread|pasta|rice|flour|cereal|protein powder/.test(n)) return "Bread / Dairy";
-  if (/lettuce|spinach|tomato|cucumber|onion|garlic|broccoli|broccolini|carrot|capsicum|zucchini|potato|bean|corn|pea|mushroom|celery|kale|cabbage|herb|ginger|lemon|lime|avocado|banana|blueberr|berry|fruit|vegetable|salad/.test(n)) return "Vegetables";
+  if (/pasta|spaghetti|penne|fettuccine|linguine|noodle/.test(n)) return "Pasta";
+  if (/milk|yoghurt|cream|cheese|butter|egg|oat|bread|rice|flour|cereal/.test(n)) return "Bread / Dairy";
+  if (/lettuce|spinach|tomato|cucumber|onion|garlic|broccoli|broccolini|carrot|capsicum|zucchini|potato|bean|corn|pea|mushroom|celery|kale|cabbage|herb|ginger|lemon|lime|avocado|banana|blueberr|berry|fruit|vegetable|salad|coriander/.test(n)) return "Vegetables";
   if (/frozen|ice cream/.test(n)) return "Freezer";
-  if (/juice|drink|soda|water|cola|lemonade|cordial/.test(n)) return "Soft Drinks";
+  if (/sauce|spice|seasoning|pepper|salt|curry|pesto|mustard|vinegar|oil|sugar|soy|fish sauce|chilli|cumin|paprika|oregano|basil|thyme|passata/.test(n)) return "Sauces & Spices";
+  if (/canned|tinned|crushed tomato|coconut milk|black bean|chickpea|lentil|tuna|sardine/.test(n)) return "Canned & Jarred";
+  if (/protein bar|protein powder|nut|almond|cashew|chip|cracker|rice cake|chocolate|lolly|snack/.test(n)) return "Snacks & Treats";
   return "Other";
 }
 
@@ -308,7 +318,7 @@ const DEFAULT_RECIPES = [
   { id: 1, name: "Banana Overnight Oats", types: ["Breakfast"], serves: 3, ingredients: [
 { name: "Light Greek Yoghurt", qty: 240, unit: "g", store: "Aldi", category: "Bread / Dairy" },
     { name: "Rolled Oats", qty: 75, unit: "g", store: "Woolworths", category: "Bread / Dairy" },
-    { name: "Black Chia Seeds", qty: 30, unit: "g", store: "Costco", category: "Other" },
+    { name: "Black Chia Seeds", qty: 30, unit: "g", store: "Costco", category: "Snacks & Treats" },
     { name: "Chocolate Protein Powder", qty: 3, unit: "scoops", store: "Costco", category: "Bread / Dairy" },
     { name: "Almond Milk", qty: 300, unit: "ml", store: "Aldi", category: "Bread / Dairy" },
     { name: "Banana", qty: 1.5, unit: "whole", store: "Woolworths", category: "Vegetables" },
@@ -316,26 +326,26 @@ const DEFAULT_RECIPES = [
   ]},
   { id: 2, name: "Pesto Pasta", types: ["Lunch", "Dinner"], serves: 3, ingredients: [
   { name: "Brown Onion", qty: 0.5, unit: "whole", store: "Woolworths", category: "Vegetables" },
-    { name: "Green Pesto", qty: 0.5, unit: "jar", store: "Woolworths", category: "Other" },
+    { name: "Green Pesto", qty: 0.5, unit: "jar", store: "Woolworths", category: "Sauces & Spices" },
     { name: "Light Thickened Cream", qty: 150, unit: "ml", store: "Woolworths", category: "Bread / Dairy" },
     { name: "Bacon", qty: 150, unit: "g", store: "Costco", category: "Meat" },
     { name: "Broccolini", qty: 1, unit: "whole", store: "Woolworths", category: "Vegetables" },
-    { name: "High Protein Pasta", qty: 0.5, unit: "packet", store: "Woolworths", category: "Bread / Dairy" },
+    { name: "High Protein Pasta", qty: 0.5, unit: "packet", store: "Woolworths", category: "Pasta" },
     { name: "Chicken Breast", qty: 500, unit: "g", store: "Costco", category: "Meat" },
   ]},
   { id: 3, name: "Green Curry", types: ["Lunch", "Dinner"], serves: 3, ingredients: [
-{ name: "Green Curry Paste", qty: 0.5, unit: "jar", store: "Woolworths", category: "Other" },
-    { name: "Brown Sugar", qty: 0.5, unit: "tbsp", store: "Aldi", category: "Other" },
+{ name: "Green Curry Paste", qty: 0.5, unit: "jar", store: "Woolworths", category: "Sauces & Spices" },
+    { name: "Brown Sugar", qty: 0.5, unit: "tbsp", store: "Aldi", category: "Sauces & Spices" },
     { name: "Green Beans", qty: 150, unit: "g", store: "Woolworths", category: "Vegetables" },
     { name: "Low Carb Potato", qty: 188, unit: "g", store: "Woolworths", category: "Vegetables" },
     { name: "Chicken Breast", qty: 500, unit: "g", store: "Costco", category: "Meat" },
-    { name: "Coconut Milk", qty: 1, unit: "cans", store: "Woolworths", category: "Other" },
+    { name: "Coconut Milk", qty: 1, unit: "cans", store: "Woolworths", category: "Canned & Jarred" },
   ]},
   { id: 4, name: "Chicken Taco Bowls", types: ["Lunch"], serves: 3, ingredients: [
 { name: "Lebanese Cucumber", qty: 1.33, unit: "whole", store: "Woolworths", category: "Vegetables" },
     { name: "Chicken Breast", qty: 533, unit: "g", store: "Costco", category: "Meat" },
     { name: "Rice (cooked)", qty: 300, unit: "g", store: "Woolworths", category: "Bread / Dairy" },
-    { name: "Black Beans", qty: 150, unit: "g", store: "Aldi", category: "Other" },
+    { name: "Black Beans", qty: 150, unit: "g", store: "Aldi", category: "Canned & Jarred" },
     { name: "Corn", qty: 167, unit: "g", store: "Aldi", category: "Vegetables" },
     { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Aldi", category: "Bread / Dairy" },
     { name: "Cherry Tomatoes", qty: 167, unit: "g", store: "Woolworths", category: "Vegetables" },
@@ -347,7 +357,7 @@ const DEFAULT_RECIPES = [
     { name: "Brown Sugar", qty: 3, unit: "tbsp", store: "Aldi", category: "Other" },
     { name: "Olive Oil", qty: 1, unit: "tbsp", store: "Woolworths", category: "Other" },
     { name: "Coriander", qty: 2, unit: "tbsp", store: "Woolworths", category: "Vegetables" },
-    { name: "Fish Sauce", qty: 1, unit: "tbsp", store: "Woolworths", category: "Other" },
+    { name: "Fish Sauce", qty: 1, unit: "tbsp", store: "Woolworths", category: "Sauces & Spices" },
     { name: "Black Pepper", qty: 0.25, unit: "tsp", store: "Woolworths", category: "Other" },
   ], steps: [
     "Pound the thick end of each chicken breast to about 1.7cm thickness for even cooking.",
@@ -361,8 +371,8 @@ const DEFAULT_RECIPES = [
   { id: 6, name: "Spaghetti Bolognaise", types: ["Lunch", "Dinner"], serves: 3, cookedInOil: true, ingredients: [
     { name: "Beef Mince (10% Lean)", qty: 500, unit: "g", store: "Costco", category: "Meat" },
     { name: "High Protein Pasta", qty: 0.4, unit: "packet", store: "Woolworths", category: "Bread / Dairy" },
-    { name: "Crushed Tomatoes", qty: 1, unit: "cans", store: "Woolworths", category: "Other" },
-    { name: "Passata", qty: 1, unit: "tbsp", store: "Woolworths", category: "Other" },
+    { name: "Crushed Tomatoes", qty: 1, unit: "cans", store: "Woolworths", category: "Canned & Jarred" },
+    { name: "Passata", qty: 1, unit: "tbsp", store: "Woolworths", category: "Sauces & Spices" },
     { name: "Carrot", qty: 1, unit: "whole", store: "Woolworths", category: "Vegetables" },
     { name: "Zucchini", qty: 1, unit: "whole", store: "Woolworths", category: "Vegetables" },
     { name: "Bacon", qty: 2, unit: "slices", store: "Costco", category: "Meat" },
@@ -686,11 +696,24 @@ const [showBackToTop, setShowBackToTop] = useState(false);
 const [sidesPickerFor, setSidesPickerFor] = useState(null);
 const [sidesSearch, setSidesSearch] = useState("");
 const [showMissingMacrosOnly, setShowMissingMacrosOnly] = useState(false);
+const [ingredientSearch, setIngredientSearch] = useState("");
 
 useEffect(() => {
   const handleScroll = () => setShowBackToTop(window.scrollY > 200);
   window.addEventListener("scroll", handleScroll);
   return () => window.removeEventListener("scroll", handleScroll);
+}, []);
+
+useEffect(() => {
+  const handleFocus = (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") {
+      setTimeout(() => {
+        e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+    }
+  };
+  document.addEventListener("focusin", handleFocus);
+  return () => document.removeEventListener("focusin", handleFocus);
 }, []);
 const [editingMacros, setEditingMacros] = useState({ cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" });
 
@@ -964,7 +987,7 @@ for (let i = 0; i < safeShoppingList.length; i++) {
 // ── Render ─────────────────────────────────────────────────────────────────
 return (
 <div style={{ fontFamily: "'Playfair Display', Georgia, serif", background: "#0c0c0a", minHeight: "100vh", color: "#ede8d8", maxWidth: 480, margin: "0 auto", paddingBottom: 84 }}>
-<style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap'); *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;} ::-webkit-scrollbar{display:none;} body{background:#0c0c0a;} .dm{font-family:'DM Sans',sans-serif;} .btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;border:none;border-radius:100px;cursor:pointer;transition:all .15s;} .card{background:#161512;border-radius:18px;border:1px solid #252320;transition:border-color .2s;} .card:hover{border-color:#353230;} .chip{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:4px 11px;border-radius:100px;cursor:pointer;transition:all .15s;border:1.5px solid transparent;} .chip.on{background:#c8a96e;color:#0c0c0a;border-color:#c8a96e;} .chip.off{background:transparent;color:#555;border-color:#2a2824;} .meal-pill{font-family:'DM Sans',sans-serif;font-size:12px;background:#1e1c18;color:#c8a96e;border:1px solid #c8a96e33;border-radius:100px;padding:4px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;} .nav-btn{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:100px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;} .nav-btn.active{background:#c8a96e1a;color:#c8a96e;} .nav-btn.inactive{color:#444;} .overlay{position:fixed;inset:0;background:#0c0c0aee;z-index:200;display:flex;align-items:flex-end;} .sheet{background:#161512;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px;border-top:1px solid #252320;} input,select{background:#0c0c0a;border:1.5px solid #252320;border-radius:10px;color:#ede8d8;padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;-webkit-appearance:none;} input:focus,select:focus{border-color:#c8a96e55;} input,select,textarea{font-size:16px!important;} select option{background:#161512;} .day-tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:100px;border:none;cursor:pointer;transition:all .15s;} .day-tab.active{background:#c8a96e;color:#0c0c0a;} .day-tab.inactive{background:#1a1814;color:#666;} .fadeIn{animation:fadeIn .2s ease;} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} .pulse{animation:pulse 1.5s infinite;} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}} .check-box{width:22px;height:22px;border-radius:7px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;} .goal-day-btn{font-family:'DM Sans',sans-serif;font-size:9px;font-weight:700;width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}`}</style>
+<style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap'); *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;} ::-webkit-scrollbar{display:none;} body{background:#0c0c0a;} .dm{font-family:'DM Sans',sans-serif;} .btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;border:none;border-radius:100px;cursor:pointer;transition:all .15s;} .card{background:#161512;border-radius:18px;border:1px solid #252320;transition:border-color .2s;} .card:hover{border-color:#353230;} .chip{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:4px 11px;border-radius:100px;cursor:pointer;transition:all .15s;border:1.5px solid transparent;} .chip.on{background:#c8a96e;color:#0c0c0a;border-color:#c8a96e;} .chip.off{background:transparent;color:#555;border-color:#2a2824;} .meal-pill{font-family:'DM Sans',sans-serif;font-size:12px;background:#1e1c18;color:#c8a96e;border:1px solid #c8a96e33;border-radius:100px;padding:4px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;} .nav-btn{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:100px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;} .nav-btn.active{background:#c8a96e1a;color:#c8a96e;} .nav-btn.inactive{color:#444;} .overlay{position:fixed;inset:0;background:#0c0c0aee;z-index:200;display:flex;align-items:flex-end;} .sheet{background:#161512;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px;border-top:1px solid #252320;} input,select{background:#0c0c0a;border:1.5px solid #252320;border-radius:10px;color:#ede8d8;padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;-webkit-appearance:none;} input:focus,select:focus{border-color:#c8a96e55;} input,select,textarea{font-size:16px!important;} .sheet{scroll-padding-bottom:300px;} select option{background:#161512;} .day-tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:100px;border:none;cursor:pointer;transition:all .15s;} .day-tab.active{background:#c8a96e;color:#0c0c0a;} .day-tab.inactive{background:#1a1814;color:#666;} .fadeIn{animation:fadeIn .2s ease;} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} .pulse{animation:pulse 1.5s infinite;} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}} .check-box{width:22px;height:22px;border-radius:7px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;} .goal-day-btn{font-family:'DM Sans',sans-serif;font-size:9px;font-weight:700;width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}`}</style>
 
 
   {/* ── Setup Banner ── */}
@@ -1008,12 +1031,27 @@ return (
     </div>
     {view === "day" && (
       <div style={{ display: "flex", gap: 6, overflowX: "auto", marginTop: 14, paddingBottom: 2 }}>
-        {DAYS.map((d, i) => (
-          <button key={d} className={`day-tab ${selectedDay === i ? "active" : "inactive"}`} onClick={() => setSelectedDay(i)}>
-            <div>{d}</div>
-            <div style={{ fontSize: 10, opacity: .7 }}>{addDays(weekStart, i).getDate()}</div>
-          </button>
-        ))}
+        {DAYS.map((d, i) => {
+          const dayDate = addDays(weekStart, i);
+          const today = new Date();
+          const isToday = dayDate.toDateString() === today.toDateString();
+          const isPast = dayDate < today && !isToday;
+          const isSelected = selectedDay === i;
+          return (
+            <button key={d} onClick={() => setSelectedDay(i)}
+              className="day-tab"
+              style={{
+                background: isSelected ? "#c8a96e" : isToday ? "#c8a96e33" : isPast ? "#2a1a1a" : "#1a1814",
+                color: isSelected ? "#0c0c0a" : isToday ? "#c8a96e" : isPast ? "#f4433688" : "#666",
+                border: isToday && !isSelected ? "1px solid #c8a96e55" : isPast && !isSelected ? "1px solid #f4433633" : "none",
+                position: "relative"
+              }}>
+              <div>{d}</div>
+              <div style={{ fontSize: 10, opacity: .7 }}>{dayDate.getDate()}</div>
+              {isToday && !isSelected && <div style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#c8a96e" }} />}
+            </button>
+          );
+        })}
       </div>
     )}
   </div>
@@ -1123,7 +1161,7 @@ return (
                   + Add side
                 </button>
                 {(() => {
-                  const m = calcMacrosForRecipe(recipe);
+                  const m = calcMacrosForRecipe(recipe, standaloneIngredients);
                   const sides = week[DAYS[selectedDay]]?.[mt]?.sides || [];
                   let extraCal = 0, extraProtein = 0, extraCarbs = 0, extraFat = 0;
                   const attendingCount = week[DAYS[selectedDay]]?.[mt]?.attending?.length || 1;
@@ -1131,7 +1169,7 @@ return (
                     if (side.type === "recipe") {
                       const sideRecipe = recipes.find(r => r.id === side.id);
                       if (sideRecipe) {
-                        const sm = calcMacrosForRecipe(sideRecipe);
+                        const sm = calcMacrosForRecipe(sideRecipe, standaloneIngredients);
                         if (sm) {
                           const perPerson = parseFloat(side.qty) || 1;
                           extraCal += (sm.cal / (sideRecipe.serves || 1)) * perPerson / attendingCount;
@@ -1231,7 +1269,7 @@ return (
           if (!slot?.mealId) return;
           const recipe = recipes.find(r => r.id === slot.mealId);
           if (!recipe) return;
-          const m = calcMacrosForRecipe(recipe);
+          const m = calcMacrosForRecipe(recipe, standaloneIngredients);
           if (!m) return;
           const perServe = { cal: m.cal / (recipe.serves || 1), protein: m.protein / (recipe.serves || 1), carbs: m.carbs / (recipe.serves || 1), fat: m.fat / (recipe.serves || 1), fibre: m.fibre / (recipe.serves || 1), sugar: m.sugar / (recipe.serves || 1) };
           totalCal += perServe.cal;
@@ -1248,7 +1286,7 @@ return (
             if (side.type === "recipe") {
               const sideRecipe = recipes.find(r => r.id === side.id);
               if (sideRecipe) {
-                const sm = calcMacrosForRecipe(sideRecipe);
+                const sm = calcMacrosForRecipe(sideRecipe, standaloneIngredients);
                 if (sm) {
                   const qty = parseFloat(side.qty) || 1;
                   totalCal += (sm.cal / (sideRecipe.serves || 1)) * qty / attendingCount;
@@ -1285,7 +1323,7 @@ return (
           snacks.forEach(snack => {
             const recipe = recipes.find(r => r.id === snack.mealId);
             if (!recipe) return;
-            const m = calcMacrosForRecipe(recipe);
+            const m = calcMacrosForRecipe(recipe, standaloneIngredients);
             if (m) {
               totalCal += m.cal;
               totalProtein += m.protein;
@@ -1377,9 +1415,10 @@ return (
         <div>
           <div style={{ position: "sticky", top: 158, zIndex: 89, background: "#0c0c0a", paddingBottom: 10, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 4, borderBottom: "1px solid #1a1814", marginBottom: 14 }}>
             <button className="btn" onClick={() => setShowAddIngredient(true)}
-              style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%" }}>
+              style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 8 }}>
               + New Ingredient
             </button>
+            <input value={ingredientSearch} onChange={e => setIngredientSearch(e.target.value)} placeholder="Search ingredients..." style={{ width: "100%" }} />
           </div>
           {(() => {
             const allIngredients = [];
@@ -1412,13 +1451,13 @@ return (
               </div>
             );
           })()}
-          {CATEGORIES.filter(cat => allIngredients.some(i => i.category === cat)).map(cat => (
+          {CATEGORIES.filter(cat => allIngredients.some(i => i.category === cat && (!showMissingMacrosOnly || !getMacros(i.name, standaloneIngredients)) && (!ingredientSearch.trim() || i.name.toLowerCase().includes(ingredientSearch.toLowerCase())))).map(cat => (
             <div key={cat} style={{ marginBottom: 16 }}>
               <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 8 }}>
                 {CATEGORY_ICONS[cat]} {cat}
               </div>
               <div style={{ background: "#161512", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
-                {allIngredients.filter(i => i.category === cat && (!showMissingMacrosOnly || !getMacros(i.name, standaloneIngredients))).sort((a,b) => a.name.localeCompare(b.name)).map((ing, idx, arr) => {
+                {allIngredients.filter(i => i.category === cat && (!showMissingMacrosOnly || !getMacros(i.name, standaloneIngredients)) && (!ingredientSearch.trim() || i.name.toLowerCase().includes(ingredientSearch.toLowerCase()))).sort((a,b) => a.name.localeCompare(b.name)).map((ing, idx, arr) => {
                   const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
                   return (
                     <div key={ing.name} onClick={() => {
@@ -1465,7 +1504,7 @@ return (
     <span key={t} className="dm" style={{ fontSize: 9, background: "#1e1c18", color: "#c8a96e", border: "1px solid #c8a96e33", borderRadius: 100, padding: "2px 7px" }}>{t}</span>
   ))}
   {(() => {
-    const m = calcMacrosForRecipe(r);
+    const m = calcMacrosForRecipe(r, standaloneIngredients);
     if (!m) return null;
     const perServe = { cal: Math.round(m.cal / (r.serves || 1)), protein: Math.round(m.protein / (r.serves || 1)) };
     return (
@@ -1934,18 +1973,47 @@ return (
           </select>
         </div>
 
+        <div style={{ marginBottom: 16 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Whole unit conversion <span style={{ color: "#444" }}>(optional)</span></div>
+          <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 8 }}>If sold/measured as "whole" (e.g. 1 apple), enter the weight of 1 whole item</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span className="dm" style={{ fontSize: 13, color: "#555", whiteSpace: "nowrap" }}>1 whole =</span>
+            <input type="number" min="0" value={newIngredient.gramsPerWhole || ""} onChange={e => setNewIngredient(p => ({ ...p, gramsPerWhole: parseFloat(e.target.value) || "" }))} placeholder="e.g. 120" style={{ width: 90 }} />
+            <select value={newIngredient.wholeUnit || "g"} onChange={e => setNewIngredient(p => ({ ...p, wholeUnit: e.target.value }))} style={{ width: 80 }}>
+              <option value="g">g</option>
+              <option value="ml">ml</option>
+            </select>
+          </div>
+        </div>
+
         {/* ── Macros section ── */}
         <div style={{ marginBottom: 16 }}>
-          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Macros per 100g</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em" }}>Macros per 100g</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button className="btn" onClick={() => setNewIngredient(p => ({ ...p, _useKj: !p._useKj }))}
+                style={{ padding: "4px 10px", background: newIngredient._useKj ? "#1e2a3a" : "#1a1814", color: newIngredient._useKj ? "#5c9fe0" : "#555", fontSize: 10, border: `1px solid ${newIngredient._useKj ? "#5c9fe044" : "transparent"}` }}>
+                {newIngredient._useKj ? "kJ" : "kcal"}
+              </button>
+            </div>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
+            {[["cal", newIngredient._useKj ? "Energy (kJ)" : "Calories (kcal)"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
               <div key={key}>
                 <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>{label}</div>
-                <input type="number" min="0" value={newIngredient.macros?.[key] ?? ""} onChange={e => setNewIngredient(p => ({ ...p, macros: { ...p.macros, [key]: e.target.value } }))}
-                  placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
+                <input type="number" min="0" value={newIngredient.macros?.[key] ?? ""} onChange={e => {
+                  let val = parseFloat(e.target.value);
+                  if (key === "cal" && newIngredient._useKj && !isNaN(val)) val = Math.round(val / 4.184);
+                  setNewIngredient(p => ({ ...p, macros: { ...p.macros, [key]: isNaN(val) ? "" : val } }));
+                }} placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
               </div>
             ))}
           </div>
+          {newIngredient._useKj && newIngredient.macros?.cal && (
+            <div className="dm" style={{ fontSize: 11, color: "#5c9fe0", marginTop: 6 }}>
+              = {newIngredient.macros.cal} kcal stored
+            </div>
+          )}
         </div>
 
         <button className="btn" onClick={() => {
@@ -1963,7 +2031,9 @@ return (
             sugar: parseFloat(macros.sugar) || 0,
           } : null;
           if (!exists) {
-            setStandaloneIngredients(prev => [...(Array.isArray(prev) ? prev : []), { name, brand: newIngredient.brand?.trim() || "", store: newIngredient.store, category: newIngredient.category || guessCategory(name), ...(parsedMacros ? { macros: parsedMacros } : {}) }]);
+            const gramsPerWhole = newIngredient.gramsPerWhole ? parseFloat(newIngredient.gramsPerWhole) : null;
+            const wholeUnit = newIngredient.wholeUnit || "g";
+            setStandaloneIngredients(prev => [...(Array.isArray(prev) ? prev : []), { name, brand: newIngredient.brand?.trim() || "", store: newIngredient.store, category: newIngredient.category || guessCategory(name), ...(parsedMacros ? { macros: parsedMacros } : {}), ...(gramsPerWhole ? { gramsPerWhole, wholeUnit } : {}) }]);
           }
           setShowAddIngredient(false);
           setNewIngredient({ name: "", brand: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } });
@@ -1994,7 +2064,7 @@ return (
 
         {/* Macros */}
         {(() => {
-          const m = calcMacrosForRecipe(viewingRecipe);
+          const m = calcMacrosForRecipe(viewingRecipe, standaloneIngredients);
           if (!m) return null;
           const ps = { cal: Math.round(m.cal / (viewingRecipe.serves || 1)), protein: Math.round(m.protein / (viewingRecipe.serves || 1)), carbs: Math.round(m.carbs / (viewingRecipe.serves || 1)), fat: Math.round(m.fat / (viewingRecipe.serves || 1)), fibre: Math.round(m.fibre / (viewingRecipe.serves || 1)), sugar: Math.round(m.sugar / (viewingRecipe.serves || 1)) };
           return (
