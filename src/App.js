@@ -515,7 +515,7 @@ return (
 />
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input type="number" value={ing.qty} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 60 }} />
+        <input type="number" value={ing.qty || ""} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 90 }} />
         <select value={ing.unit} onChange={e => updateIng(idx, "unit", e.target.value)} style={{ width: 80 }}>
           <option value="">None</option>
           <option value="g">g</option>
