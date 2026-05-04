@@ -504,15 +504,21 @@ return (
     <div key={idx} style={{ marginBottom: 12, padding: "10px", background: "#0c0c0a", borderRadius: 8, border: "1px solid #252320" }}>
       <div style={{ marginBottom: 8 }}>
         <IngredientAutocomplete
-  value={ing.name}
-  onChange={val => updateIng(idx, "name", val)}
-  onSelectFull={item => {
-    const a = [...draft.ingredients];
-    a[idx] = { ...a[idx], name: item.name, store: item.store || a[idx].store, category: item.category || guessCategory(item.name) };
-    setDraft(p => ({ ...p, ingredients: a }));
-  }}
-  recipes={recipes}
-/>
+          value={ing.name}
+          onChange={val => updateIng(idx, "name", val)}
+          onSelectFull={item => {
+            const a = [...draft.ingredients];
+            a[idx] = { ...a[idx], name: item.name, store: item.store || a[idx].store, category: item.category || guessCategory(item.name) };
+            setDraft(p => ({ ...p, ingredients: a }));
+          }}
+          recipes={recipes}
+        />
+        {ing.name.trim().length > 2 && !recipes.some(r => r.ingredients.some(i => i.name.toLowerCase() === ing.name.toLowerCase())) && (
+          <div className="dm" style={{ fontSize: 11, color: "#5c9fe0", marginTop: 5, cursor: "pointer" }}
+            onClick={() => setShowAddIngredient({ prefill: ing.name.trim() })}>
+            + Add "{ing.name.trim()}" to ingredient database
+          </div>
+        )}
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <input type="number" value={ing.qty || ""} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 90 }} />
@@ -1714,42 +1720,72 @@ return (
         {/* ── Macros section ── */}
         <div style={{ marginBottom: 16 }}>
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Macros per 100g</div>
-          <button className="btn" onClick={async () => {
-            const name = newIngredient.name.trim();
-            if (!name) return;
-            setNewIngredient(p => ({ ...p, _lookingUp: true }));
-            try {
-              const response = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  model: "claude-sonnet-4-20250514",
-                  max_tokens: 1000,
-                  messages: [{
-                    role: "user",
-                    content: `Give me the nutritional info per 100g for: ${name}. Respond ONLY with a JSON object with these exact keys: cal, protein, carbs, fat, fibre, sugar. All values should be numbers (not strings). No markdown, no explanation, just the JSON object.`
-                  }]
-                })
-              });
-              const data = await response.json();
-              const text = data.content?.find(b => b.type === "text")?.text || "";
-              const clean = text.replace(/```json|```/g, "").trim();
-              const macros = JSON.parse(clean);
-              setNewIngredient(p => ({ ...p, _lookingUp: false, macros: {
-                cal: macros.cal ?? "",
-                protein: macros.protein ?? "",
-                carbs: macros.carbs ?? "",
-                fat: macros.fat ?? "",
-                fibre: macros.fibre ?? "",
-                sugar: macros.sugar ?? "",
-              }}));
-            } catch (err) {
-              setNewIngredient(p => ({ ...p, _lookingUp: false }));
-              alert("Lookup failed — please fill in macros manually.");
-            }
-          }} style={{ width: "100%", marginBottom: 12, padding: "10px", background: "#1a1814", color: "#444", cursor: "not-allowed", border: "1px solid #4caf5044" }}>
-            {newIngredient._lookingUp ? "⏳ Looking up..." : "✨ Look up with Claude (No credits available"}
-          </button>
+          
+          {/* Open Food Facts Search */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input
+                value={newIngredient._offSearch || newIngredient.name || ""}
+                onChange={e => setNewIngredient(p => ({ ...p, _offSearch: e.target.value }))}
+                placeholder="Search food database..."
+                style={{ flex: 1 }}
+              />
+              <button className="btn" onClick={async () => {
+                const query = newIngredient._offSearch || newIngredient.name;
+                if (!query?.trim()) return;
+                setNewIngredient(p => ({ ...p, _offSearching: true, _offResults: [] }));
+                try {
+                  const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10&fields=product_name,brands,nutriments,serving_size&cc=au&lc=en`);
+                  const data = await res.json();
+                  const results = (data.products || []).filter(p => p.product_name && p.nutriments).map(p => ({
+                    name: p.product_name,
+                    brand: p.brands || "",
+                    cal: Math.round(p.nutriments["energy-kcal_100g"] || p.nutriments["energy_100g"] / 4.184 || 0),
+                    protein: Math.round((p.nutriments["proteins_100g"] || 0) * 10) / 10,
+                    carbs: Math.round((p.nutriments["carbohydrates_100g"] || 0) * 10) / 10,
+                    fat: Math.round((p.nutriments["fat_100g"] || 0) * 10) / 10,
+                    fibre: Math.round((p.nutriments["fiber_100g"] || 0) * 10) / 10,
+                    sugar: Math.round((p.nutriments["sugars_100g"] || 0) * 10) / 10,
+                  }));
+                  setNewIngredient(p => ({ ...p, _offSearching: false, _offResults: results }));
+                } catch (err) {
+                  setNewIngredient(p => ({ ...p, _offSearching: false, _offResults: [] }));
+                }
+              }} style={{ padding: "9px 14px", background: "#1a2a3a", color: "#5c9fe0", border: "1px solid #5c9fe044", whiteSpace: "nowrap" }}>
+                {newIngredient._offSearching ? "⏳" : "🔍 Search"}
+              </button>
+            </div>
+
+            {/* Results list */}
+            {(newIngredient._offResults || []).length > 0 && (
+              <div style={{ background: "#0c0c0a", border: "1px solid #252320", borderRadius: 10, maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
+                {newIngredient._offResults.map((item, idx) => (
+                  <div key={idx} onMouseDown={() => {
+                    setNewIngredient(p => ({
+                      ...p,
+                      name: p.name || item.name,
+                      _offResults: [],
+                      macros: { cal: item.cal, protein: item.protein, carbs: item.carbs, fat: item.fat, fibre: item.fibre, sugar: item.sugar }
+                    }));
+                  }} style={{ padding: "10px 12px", borderBottom: idx < newIngredient._offResults.length - 1 ? "1px solid #1a1814" : "none", cursor: "pointer" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#1a1814"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <div className="dm" style={{ fontSize: 13, color: "#ede8d8", fontWeight: 500 }}>{item.name}</div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 3 }}>
+                      {item.brand && <span className="dm" style={{ fontSize: 10, color: "#555" }}>{item.brand}</span>}
+                      <span className="dm" style={{ fontSize: 10, color: "#c8a96e" }}>{item.cal} cal</span>
+                      <span className="dm" style={{ fontSize: 10, color: "#5c9fe0" }}>{item.protein}g P</span>
+                      <span className="dm" style={{ fontSize: 10, color: "#a78bca" }}>{item.fat}g F</span>
+                      <span className="dm" style={{ fontSize: 10, color: "#888" }}>{item.carbs}g C</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {newIngredient._offSearching === false && (newIngredient._offResults || []).length === 0 && newIngredient._offSearch && (
+              <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 8 }}>No results — fill in macros manually below</div>
+            )}
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
             {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
               <div key={key}>
