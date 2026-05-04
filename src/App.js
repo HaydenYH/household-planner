@@ -1224,8 +1224,9 @@ return (
                     <div key={ing.name} onClick={() => {
   const m = getMacros(ing.name, standaloneIngredients);
   const macros = m || { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" };
-  setIngredientMacroPopup({ name: ing.name, ...macros });
-  setEditingMacros({ cal: macros.cal ?? "", protein: macros.protein ?? "", carbs: macros.carbs ?? "", fat: macros.fat ?? "", fibre: macros.fibre ?? "", sugar: macros.sugar ?? "" });
+  const existingIng = (standaloneIngredients || []).find(i => i.name.toLowerCase() === ing.name.toLowerCase());
+  setIngredientMacroPopup({ name: ing.name, brand: existingIng?.brand || "", ...macros });
+  setEditingMacros({ cal: macros.cal ?? "", protein: macros.protein ?? "", carbs: macros.carbs ?? "", fat: macros.fat ?? "", fibre: macros.fibre ?? "", sugar: macros.sugar ?? "", brand: existingIng?.brand || "" });
 }}
                       style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none", cursor: "pointer" }}>
                       <div>
@@ -1842,6 +1843,10 @@ return (
           <h2 style={{ margin: 0, fontSize: 18 }}>{ingredientMacroPopup.name}</h2>
           <button onClick={() => setIngredientMacroPopup(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
         </div>
+        <div style={{ marginBottom: 14 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Brand <span style={{ color: "#444" }}>(optional)</span></div>
+          <input value={editingMacros.brand ?? ""} onChange={e => setEditingMacros(p => ({ ...p, brand: e.target.value }))} placeholder="e.g. Woolworths" style={{ width: "100%" }} />
+        </div>
         <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
           {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
@@ -1852,29 +1857,41 @@ return (
             </div>
           ))}
         </div>
-        <button className="btn" onClick={() => {
-          const name = ingredientMacroPopup.name;
-          const parsedMacros = {
-            cal: parseFloat(editingMacros.cal) || 0,
-            protein: parseFloat(editingMacros.protein) || 0,
-            carbs: parseFloat(editingMacros.carbs) || 0,
-            fat: parseFloat(editingMacros.fat) || 0,
-            fibre: parseFloat(editingMacros.fibre) || 0,
-            sugar: parseFloat(editingMacros.sugar) || 0,
-          };
-          setStandaloneIngredients(prev => {
-            const list = Array.isArray(prev) ? prev : [];
-            const exists = list.find(i => i.name.toLowerCase() === name.toLowerCase());
-            if (exists) {
-              return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, macros: parsedMacros } : i);
-            } else {
-              return [...list, { name, store: "Woolworths", category: guessCategory(name), macros: parsedMacros }];
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn" onClick={() => {
+            const name = ingredientMacroPopup.name;
+            const parsedMacros = {
+              cal: parseFloat(editingMacros.cal) || 0,
+              protein: parseFloat(editingMacros.protein) || 0,
+              carbs: parseFloat(editingMacros.carbs) || 0,
+              fat: parseFloat(editingMacros.fat) || 0,
+              fibre: parseFloat(editingMacros.fibre) || 0,
+              sugar: parseFloat(editingMacros.sugar) || 0,
+            };
+            const brand = editingMacros.brand?.trim() || "";
+            setStandaloneIngredients(prev => {
+              const list = Array.isArray(prev) ? prev : [];
+              const exists = list.find(i => i.name.toLowerCase() === name.toLowerCase());
+              if (exists) {
+                return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, brand, macros: parsedMacros } : i);
+              } else {
+                return [...list, { name, brand, store: "Woolworths", category: guessCategory(name), macros: parsedMacros }];
+              }
+            });
+            setIngredientMacroPopup(null);
+          }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", flex: 1 }}>
+            Save
+          </button>
+          <button className="btn" onClick={() => {
+            const name = ingredientMacroPopup.name;
+            if (window.confirm(`Delete "${name}" from your ingredient database?`)) {
+              setStandaloneIngredients(prev => (Array.isArray(prev) ? prev : []).filter(i => i.name.toLowerCase() !== name.toLowerCase()));
+              setIngredientMacroPopup(null);
             }
-          });
-          setIngredientMacroPopup(null);
-        }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
-          Save Macros
-        </button>
+          }} style={{ background: "#2a1a1a", color: "#f44336", border: "1px solid #f4433633", padding: "13px 20px" }}>
+            Delete
+          </button>
+        </div>
       </div>
     </div>
   )}
