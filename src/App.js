@@ -69,8 +69,10 @@ ws.send(JSON.stringify({ topic: "realtime:public:household_data", event: "phx_jo
 ws.onmessage = (msg) => {
   try {
     const data = JSON.parse(msg.data);
+    console.log("WS message received:", data.event, data.payload?.data?.record);
     if (data.event === "postgres_changes" && data.payload?.data?.record) {
       const record = data.payload.data.record;
+      console.log("Record updated_by:", record.updated_by);
       callback(record.value, { updatedBy: record.updated_by || null });
     }
   } catch (_) {}
