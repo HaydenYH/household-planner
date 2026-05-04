@@ -340,7 +340,7 @@ function buildEmptyWeek() {
   DAYS.forEach(d => {
     w[d] = {};
     MEAL_TYPES.forEach(m => { w[d][m] = { attending: [...MEMBERS], mealId: null, leftovers: false }; });
-    MEMBERS.forEach(member => { w[d][`snack_${member}`] = { mealId: null }; });
+    MEMBERS.forEach(member => { w[d][`snack_${member}`] = { snacks: [] }; });
   });
   return w;
 }
@@ -745,25 +745,27 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
     MEMBERS.forEach(member => {
       const snackKey = `snack_${member}`;
       const slot = currentWeek[day]?.[snackKey];
-      if (!slot?.mealId) return;
-      const recipe = currentRecipes.find(r => r.id === slot.mealId);
-      if (!recipe) return;
-      recipe.ingredients.forEach(ing => {
-        const store = ing.store || "Woolworths";
-        const key = `${ing.name.toLowerCase()}-${store}`;
-        if (!consolidated[key]) {
-          consolidated[key] = {
-            id: key,
-            name: ing.name,
-            store,
-            checked: false,
-            pantryQty: 0,
-            pantryUnit: ing.unit || "",
-            quantities: [],
-          };
-        }
-        consolidated[key].category = ing.category || guessCategory(ing.name);
-        consolidated[key].quantities.push({ qty: ing.qty || 1, unit: ing.unit || "" });
+      const snacks = slot?.snacks || [];
+      snacks.forEach(snack => {
+        const recipe = currentRecipes.find(r => r.id === snack.mealId);
+        if (!recipe) return;
+        recipe.ingredients.forEach(ing => {
+          const store = ing.store || "Woolworths";
+          const key = `${ing.name.toLowerCase()}-${store}`;
+          if (!consolidated[key]) {
+            consolidated[key] = {
+              id: key,
+              name: ing.name,
+              store,
+              checked: false,
+              pantryQty: 0,
+              pantryUnit: ing.unit || "",
+              quantities: [],
+            };
+          }
+          consolidated[key].category = ing.category || guessCategory(ing.name);
+          consolidated[key].quantities.push({ qty: snack.qty || 1, unit: snack.unit || ing.unit || "" });
+        });
       });
     });
   });
@@ -997,13 +999,6 @@ return (
             )}
             {recipe && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18" }}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
-                  {recipe.ingredients.slice(0, 4).map((ing, idx) => {
-                    const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
-                    return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name}</span>;
-                  })}
-                  {recipe.ingredients.length > 4 && <span className="dm" style={{ fontSize: 10, color: "#555", padding: "2px 4px" }}>+{recipe.ingredients.length - 4} more</span>}
-                </div>
                 {(() => {
                   const m = calcMacrosForRecipe(recipe);
                   if (!m) return null;
@@ -1031,26 +1026,43 @@ return (
     {/* ── Snack Cards ── */}
       {MEMBERS.filter(m => !activeUser || m === activeUser).map(member => {
         const snackKey = `snack_${member}`;
-        const snackSlot = week[DAYS[selectedDay]]?.[snackKey] || { mealId: null };
-        const snackRecipe = recipes.find(r => r.id === snackSlot.mealId);
+        const snackSlot = week[DAYS[selectedDay]]?.[snackKey] || { snacks: [] };
+        const snacks = snackSlot.snacks || [];
         const color = MEMBER_COLORS[member];
         return (
           <div className="card" key={snackKey} style={{ marginBottom: 12, padding: "16px", borderColor: color + "33" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: snackRecipe ? 12 : 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: snacks.length > 0 ? 12 : 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 20 }}>🍎</span>
-                <span style={{ fontWeight: 700, fontSize: 16 }}>{member}'s Snack</span>
+                <span style={{ fontWeight: 700, fontSize: 16 }}>{member}'s Snacks</span>
               </div>
               <button className="meal-pill" onClick={() => { setSnackPickerFor({ day: DAYS[selectedDay], member }); setSnackSearch(""); }}
                 style={{ borderColor: color + "55", color }}>
-                {snackRecipe ? snackRecipe.name : "+ Add snack"}
+                + Add snack
               </button>
             </div>
-            {snackRecipe && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                {snackRecipe.ingredients.slice(0, 4).map((ing, idx) => {
-                  const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
-                  return <span key={idx} className="dm" style={{ fontSize: 10, background: sc.light, color: sc.accent, border: `1px solid ${sc.accent}33`, borderRadius: 100, padding: "2px 8px" }}>{ing.name}</span>;
+            {snacks.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {snacks.map((snack, idx) => {
+                  const snackRecipe = recipes.find(r => r.id === snack.mealId);
+                  if (!snackRecipe) return null;
+                  return (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0c0c0a", borderRadius: 8, padding: "8px 10px", border: "1px solid #252320" }}>
+                      <span className="dm" style={{ fontSize: 13, color: "#ede8d8" }}>{snackRecipe.name}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span className="dm" style={{ fontSize: 11, color: "#555" }}>{snack.qty} {snack.unit}</span>
+                        <button onClick={() => {
+                          setWeek(prev => ({
+                            ...prev,
+                            [DAYS[selectedDay]]: {
+                              ...prev[DAYS[selectedDay]],
+                              [snackKey]: { snacks: snacks.filter((_, i) => i !== idx) }
+                            }
+                          }));
+                        }} style={{ background: "none", border: "none", color: "#444", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>×</button>
+                      </div>
+                    </div>
+                  );
                 })}
               </div>
             )}
@@ -1081,21 +1093,21 @@ return (
         if (activeUser) {
           const snackKey = `snack_${activeUser}`;
           const slot = week[DAYS[selectedDay]]?.[snackKey];
-          if (slot?.mealId) {
-            const recipe = recipes.find(r => r.id === slot.mealId);
-            if (recipe) {
-              const m = calcMacrosForRecipe(recipe);
-              if (m) {
-                totalCal += m.cal;
-                totalProtein += m.protein;
-                totalCarbs += m.carbs;
-                totalFat += m.fat;
-                totalFibre += m.fibre;
-                totalSugar += m.sugar;
-                hasMacros = true;
-              }
+          const snacks = slot?.snacks || [];
+          snacks.forEach(snack => {
+            const recipe = recipes.find(r => r.id === snack.mealId);
+            if (!recipe) return;
+            const m = calcMacrosForRecipe(recipe);
+            if (m) {
+              totalCal += m.cal;
+              totalProtein += m.protein;
+              totalCarbs += m.carbs;
+              totalFat += m.fat;
+              totalFibre += m.fibre;
+              totalSugar += m.sugar;
+              hasMacros = true;
             }
-          }
+          });
         }
         return (
           <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: "#c8a96e33" }}>
@@ -1990,11 +2002,20 @@ return (
                               const snackId = `snack-ing-${ing.name.toLowerCase().replace(/\s+/g, "-")}`;
                               const snackRecipeObj = { id: snackId, name: ing.name, types: ["Snack"], serves: 1, ingredients: [{ name: ing.name, qty: snackQty, unit: snackUnit, store: ing.store, category: ing.category || guessCategory(ing.name) }] };
                               setRecipes(prev => {
-                                const exists = prev.find(r => r.id === snackId);
-                                if (exists) return prev.map(r => r.id === snackId ? snackRecipeObj : r);
-                                return [...prev, snackRecipeObj];
-                              });
-                              setWeek(prev => ({ ...prev, [snackPickerFor.day]: { ...prev[snackPickerFor.day], [snackKey]: { mealId: snackId } } }));
+  const exists = prev.find(r => r.id === snackId);
+  if (exists) return prev.map(r => r.id === snackId ? snackRecipeObj : r);
+  return [...prev, snackRecipeObj];
+});
+setWeek(prev => {
+  const existing = prev[snackPickerFor.day]?.[snackKey]?.snacks || [];
+  return {
+    ...prev,
+    [snackPickerFor.day]: {
+      ...prev[snackPickerFor.day],
+      [snackKey]: { snacks: [...existing, { mealId: snackId, qty: snackQty, unit: snackUnit }] }
+    }
+  };
+});
                               setSelectedSnackIng(null);
                               setSnackPickerFor(null);
                             }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", width: "100%" }}>
