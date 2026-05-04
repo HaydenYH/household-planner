@@ -90,6 +90,8 @@ return () => {};
 const ACTIVE_USER_KEY = "hh_active_user";
 function getSavedUser() { try { return localStorage.getItem(ACTIVE_USER_KEY) || null; } catch { return null; } }
 function saveUser(name) { try { localStorage.setItem(ACTIVE_USER_KEY, name); } catch {} }
+let _currentUser = getSavedUser();
+function setCurrentUser(name) { _currentUser = name; }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MEMBERS = ["Hayden", "Eilish", "Tyran"];
@@ -460,13 +462,13 @@ const unsub = sb.subscribe(key, (val, meta) => {
 return unsub;
 }, [key]);
 
-const setAndSave = useCallback((updater, activeUserName = null) => {
+const setAndSave = useCallback((updater) => {
   setState(prev => {
     const next = typeof updater === "function" ? updater(prev) : updater;
     localRef.current = true;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      sb.set(key, next, activeUserName).finally(() => { localRef.current = false; });
+      sb.set(key, next, _currentUser).finally(() => { localRef.current = false; });
     }, 400);
     return next;
   });
@@ -696,6 +698,8 @@ const [week, setWeek, weekReady] = useSharedState(getWeekKey(weekStart), default
 const [shoppingList, setShoppingList, shopReady] = useSharedState("shopping", [], handleRemoteChange);
 const [goals, setGoals, goalsReady] = useSharedState("goals", buildEmptyGoals(), handleRemoteChange);
 const [standaloneIngredients, setStandaloneIngredients] = useSharedState("ingredients", [], handleRemoteChange);
+
+
 
 const [pickerFor, setPickerFor] = useState(null);
 const [pickerLeftovers, setPickerLeftovers] = useState(false);
