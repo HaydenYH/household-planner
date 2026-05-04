@@ -1003,7 +1003,9 @@ function saveEditedRecipe(draft) {
     qty: parseFloat(i.qty) || 0,
     unit: i.unit === "custom" ? i.customUnit || "" : i.unit
   }));
-  setRecipes(prev => prev.map(r => r.id === draft.id ? { ...draft, types: draft.types || ["Dinner"], serves: draft.serves || 4, ingredients: processedIngredients } : r));
+  const updated = { ...draft, types: draft.types || ["Dinner"], serves: draft.serves || 4, ingredients: processedIngredients };
+  setRecipes(prev => prev.map(r => r.id === draft.id ? updated : r));
+  if (viewingRecipe?.id === draft.id) setViewingRecipe(updated);
   setEditingRecipe(null);
 }
 
