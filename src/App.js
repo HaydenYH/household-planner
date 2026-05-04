@@ -910,7 +910,24 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes, curren
             };
           }
           consolidated[key].category = ing.category || guessCategory(ing.name);
-          consolidated[key].quantities.push({ qty: snack.qty || 1, unit: snack.unit || ing.unit || "" });
+          const snackStandaloneIng = (currentStandaloneIngredients || []).find(s => s.name.toLowerCase() === ing.name.toLowerCase());
+          const snackHardcodedWhole = GRAMS_PER_UNIT[ing.name.toLowerCase()]?.whole;
+          const snackGramsPerWhole = snackStandaloneIng?.gramsPerWhole || snackHardcodedWhole || null;
+          const snackWholeUnit = snackStandaloneIng?.wholeUnit || "g";
+          const snackConversionUnit = snackStandaloneIng?.conversionUnit || "whole";
+          const snackQtyRaw = snack.qty || 1;
+          const snackUnitRaw = snack.unit || ing.unit || "";
+          if (snackGramsPerWhole && (snackUnitRaw === "g" || snackUnitRaw === "ml" || snackUnitRaw === "kg" || snackUnitRaw === "L")) {
+            const totalGrams = getGramsForUnit(ing.name, snackUnitRaw, snackQtyRaw);
+            if (totalGrams !== null) {
+              const wholeCount = parseFloat((totalGrams / snackGramsPerWhole).toFixed(2));
+              consolidated[key].quantities.push({ qty: wholeCount, unit: snackConversionUnit });
+            } else {
+              consolidated[key].quantities.push({ qty: snackQtyRaw, unit: snackUnitRaw });
+            }
+          } else {
+            consolidated[key].quantities.push({ qty: snackQtyRaw, unit: snackUnitRaw });
+          }
         });
       });
     });
