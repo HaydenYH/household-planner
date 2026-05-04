@@ -1468,7 +1468,7 @@ return (
       });
       return (
         <div>
-          <div style={{ position: "sticky", top: 158, zIndex: 89, background: "#0c0c0a", paddingBottom: 10, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 4, borderBottom: "1px solid #1a1814", marginBottom: 14, boxShadow: "0 4px 12px #0c0c0a" }}>
+          <div style={{ position: "sticky", top: 158, zIndex: 89, background: "#0c0c0a", paddingBottom: 10, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 4, borderBottom: "1px solid #1a1814", marginBottom: 14, boxShadow: "0 8px 16px #0c0c0a" }}>
             <button className="btn" onClick={() => setShowAddIngredient(true)}
               style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 8 }}>
               + New Ingredient
@@ -2033,7 +2033,10 @@ return (
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Whole unit conversion <span style={{ color: "#444" }}>(optional)</span></div>
           <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 8 }}>If sold/measured as "whole" (e.g. 1 apple), enter the weight of 1 whole item</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span className="dm" style={{ fontSize: 13, color: "#555", whiteSpace: "nowrap" }}>1 whole =</span>
+            <select id="conversionFromUnit" defaultValue={existing?.conversionUnit || "whole"} style={{ width: 90 }}>
+                  {["whole", "slices", "cans", "jar", "packet", "scoops", "cups"].map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+                <span className="dm" style={{ fontSize: 13, color: "#555", whiteSpace: "nowrap" }}>=</span>
             <input type="number" min="0" value={newIngredient.gramsPerWhole || ""} onChange={e => setNewIngredient(p => ({ ...p, gramsPerWhole: parseFloat(e.target.value) || "" }))} placeholder="e.g. 120" style={{ width: 90 }} />
             <select value={newIngredient.wholeUnit || "g"} onChange={e => setNewIngredient(p => ({ ...p, wholeUnit: e.target.value }))} style={{ width: 80 }}>
               <option value="g">g</option>
@@ -2276,15 +2279,19 @@ return (
           const hardcoded = GRAMS_PER_UNIT[name.toLowerCase()];
           const gramsPerWhole = existing?.gramsPerWhole || (hardcoded?.whole) || null;
           const wholeUnit = existing?.wholeUnit || "g";
+          const conversionUnit = existing?.conversionUnit || "whole";
           return (
             <>
               <div style={{ background: "#0c0c0a", borderRadius: 12, padding: "14px", marginBottom: 16, border: "1px solid #252320" }}>
-                <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Whole unit conversion</div>
+                <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Saved conversion</div>
                 {gramsPerWhole ? (
                   <>
-                    <div className="dm" style={{ fontSize: 16, color: "#ede8d8", marginBottom: 6 }}>1 whole = <span style={{ color: "#c8a96e", fontWeight: 700 }}>{gramsPerWhole}{wholeUnit}</span></div>
-                    <div className="dm" style={{ fontSize: 13, color: "#555" }}>100g = {parseFloat((100 / gramsPerWhole).toFixed(2))} whole</div>
-                    <div className="dm" style={{ fontSize: 13, color: "#555" }}>1 whole = {gramsPerWhole}{wholeUnit}</div>
+                    <div className="dm" style={{ fontSize: 16, color: "#ede8d8", marginBottom: 6 }}>
+                      1 {conversionUnit} = <span style={{ color: "#c8a96e", fontWeight: 700 }}>{gramsPerWhole}{wholeUnit}</span>
+                    </div>
+                    <div className="dm" style={{ fontSize: 13, color: "#555" }}>
+                      100{wholeUnit} = {parseFloat((100 / gramsPerWhole).toFixed(2))} {conversionUnit}
+                    </div>
                   </>
                 ) : (
                   <div className="dm" style={{ fontSize: 13, color: "#444" }}>No conversion saved yet</div>
@@ -2292,7 +2299,11 @@ return (
               </div>
               <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Set conversion</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
-                <span className="dm" style={{ fontSize: 13, color: "#555", whiteSpace: "nowrap" }}>1 whole =</span>
+                <span className="dm" style={{ fontSize: 13, color: "#555", whiteSpace: "nowrap" }}>1</span>
+                <select id="conversionFromUnit" defaultValue={conversionUnit} style={{ width: 90 }}>
+                  {["whole", "slices", "cans", "jar", "packet", "scoops", "cups"].map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+                <span className="dm" style={{ fontSize: 13, color: "#555", whiteSpace: "nowrap" }}>=</span>
                 <input type="number" min="0" id="conversionInput" defaultValue={gramsPerWhole || ""} placeholder="e.g. 200" style={{ flex: 1 }} />
                 <select id="conversionUnit" defaultValue={wholeUnit} style={{ width: 70 }}>
                   <option value="g">g</option>
@@ -2302,14 +2313,15 @@ return (
               <button className="btn" onClick={() => {
                 const val = parseFloat(document.getElementById("conversionInput").value);
                 const unit = document.getElementById("conversionUnit").value;
+                const fromUnit = document.getElementById("conversionFromUnit").value;
                 if (!val) return;
                 setStandaloneIngredients(prev => {
                   const list = Array.isArray(prev) ? prev : [];
                   const exists = list.find(i => i.name.toLowerCase() === name.toLowerCase());
                   if (exists) {
-                    return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, gramsPerWhole: val, wholeUnit: unit } : i);
+                    return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, gramsPerWhole: val, wholeUnit: unit, conversionUnit: fromUnit } : i);
                   } else {
-                    return [...list, { name, store: "Woolworths", category: guessCategory(name), gramsPerWhole: val, wholeUnit: unit }];
+                    return [...list, { name, store: "Woolworths", category: guessCategory(name), gramsPerWhole: val, wholeUnit: unit, conversionUnit: fromUnit }];
                   }
                 });
                 setIngredientMacroPopup(null);
