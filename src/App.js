@@ -67,12 +67,13 @@ ws.onopen = () => {
 ws.send(JSON.stringify({ topic: "realtime:public:household_data", event: "phx_join", payload: { config: { broadcast: { self: false }, presence: { key: "" }, postgres_changes: [{ event: "UPDATE", schema: "public", table: "household_data", filter: `key=eq.${key}` }, { event: "INSERT", schema: "public", table: "household_data", filter: `key=eq.${key}` }] } }, ref: "1" }));
 };
 ws.onmessage = (msg) => {
-try {
-const data = JSON.parse(msg.data);
-if (data.event === "postgres_changes" && data.payload?.data?.record) {
-callback(data.payload.data.record.value);
-}
-} catch (_) {}
+  try {
+    const data = JSON.parse(msg.data);
+    if (data.event === "postgres_changes" && data.payload?.data?.record) {
+      const record = data.payload.data.record;
+      callback(record.value, { updatedBy: record.updated_by || null });
+    }
+  } catch (_) {}
 };
 ws.onerror = (err) => console.warn("WebSocket error:", err);
 return () => { try { ws.close(); } catch (_) {} };
