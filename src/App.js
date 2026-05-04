@@ -835,7 +835,7 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
             const key = `${ing.name.toLowerCase()}-${store}`;
             if (!consolidated[key]) consolidated[key] = { id: key, name: ing.name, store, checked: false, pantryQty: 0, pantryUnit: ing.unit || "", quantities: [] };
             consolidated[key].category = ing.category || guessCategory(ing.name);
-            consolidated[key].quantities.push({ qty: ing.qty / (sideRecipe.serves || 1), unit: ing.unit || "" });
+            consolidated[key].quantities.push({ qty: (ing.qty / (sideRecipe.serves || 1)) * (parseFloat(side.qty) || 1), unit: ing.unit || "" });
           });
         } else {
           const ingDetails = [...recipes.flatMap(r => r.ingredients), ...(standaloneIngredients || [])].find(i => i.name.toLowerCase() === side.name.toLowerCase());
@@ -1126,18 +1126,31 @@ return (
                   const m = calcMacrosForRecipe(recipe);
                   const sides = week[DAYS[selectedDay]]?.[mt]?.sides || [];
                   let extraCal = 0, extraProtein = 0, extraCarbs = 0, extraFat = 0;
+                  const attendingCount = week[DAYS[selectedDay]]?.[mt]?.attending?.length || 1;
                   sides.forEach(side => {
                     if (side.type === "recipe") {
                       const sideRecipe = recipes.find(r => r.id === side.id);
                       if (sideRecipe) {
                         const sm = calcMacrosForRecipe(sideRecipe);
-                        if (sm) { extraCal += sm.cal / (sideRecipe.serves || 1); extraProtein += sm.protein / (sideRecipe.serves || 1); extraCarbs += sm.carbs / (sideRecipe.serves || 1); extraFat += sm.fat / (sideRecipe.serves || 1); }
+                        if (sm) {
+                          const perPerson = parseFloat(side.qty) || 1;
+                          extraCal += (sm.cal / (sideRecipe.serves || 1)) * perPerson / attendingCount;
+                          extraProtein += (sm.protein / (sideRecipe.serves || 1)) * perPerson / attendingCount;
+                          extraCarbs += (sm.carbs / (sideRecipe.serves || 1)) * perPerson / attendingCount;
+                          extraFat += (sm.fat / (sideRecipe.serves || 1)) * perPerson / attendingCount;
+                        }
                       }
                     } else {
                       const ing = getMacros(side.name, standaloneIngredients);
                       if (ing) {
-                        const grams = getGramsForUnit(side.name, side.unit, parseFloat(side.qty) || 0);
-                        if (grams !== null) { const scale = grams / 100; extraCal += ing.cal * scale; extraProtein += ing.protein * scale; extraCarbs += ing.carbs * scale; extraFat += ing.fat * scale; }
+                        const totalGrams = getGramsForUnit(side.name, side.unit, parseFloat(side.qty) || 0);
+                        if (totalGrams !== null) {
+                          const scale = (totalGrams / attendingCount) / 100;
+                          extraCal += ing.cal * scale;
+                          extraProtein += ing.protein * scale;
+                          extraCarbs += ing.carbs * scale;
+                          extraFat += ing.fat * scale;
+                        }
                       }
                     }
                   });
@@ -2154,7 +2167,7 @@ return (
                         </div>
                         {selectedSnackIng?.name === ing.name && (
                           <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
-                            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>How much?</div>
+                            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Total qty for whole meal</div>
                             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                               <input type="number" value={snackQty} onChange={e => setSnackQty(parseFloat(e.target.value) || 1)}
                                 style={{ width: 70 }} min="0.1" step="0.5" />
@@ -2244,13 +2257,18 @@ setWeek(prev => {
                   <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 6 }}>📖 Recipes</div>
                   {filteredRecipes.map(r => (
                     <div key={r.id}>
-                      <div onClick={() => setSelectedSnackIng({ type: "recipe", id: r.id, name: r.name })}
+                      <div onClick={() => { setSelectedSnackIng({ type: "recipe", id: r.id, name: r.name }); setSnackQty(1); }}
                         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: selectedSnackIng?.id === r.id ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${selectedSnackIng?.id === r.id ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
                         <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{r.name}</span>
                         <span className="dm" style={{ fontSize: 11, color: "#555" }}>serves {r.serves}</span>
                       </div>
                       {selectedSnackIng?.id === r.id && (
                         <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
+                          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>How many serves?</div>
+                          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                            <input type="number" value={snackQty} onChange={e => setSnackQty(parseFloat(e.target.value) || 1)} style={{ width: 80 }} min="1" step="1" />
+                            <div className="dm" style={{ fontSize: 13, color: "#555", display: "flex", alignItems: "center" }}>serves</div>
+                          </div>
                           <button className="btn" onClick={() => {
                             setWeek(prev => ({
                               ...prev,
@@ -2258,13 +2276,13 @@ setWeek(prev => {
                                 ...prev[sidesPickerFor.day],
                                 [sidesPickerFor.mealType]: {
                                   ...prev[sidesPickerFor.day][sidesPickerFor.mealType],
-                                  sides: [...(prev[sidesPickerFor.day][sidesPickerFor.mealType].sides || []), { type: "recipe", id: r.id, name: r.name, qty: 1, unit: "serve" }]
+                                  sides: [...(prev[sidesPickerFor.day][sidesPickerFor.mealType].sides || []), { type: "recipe", id: r.id, name: r.name, qty: snackQty, unit: "serves" }]
                                 }
                               }
                             }));
                             setSidesPickerFor(null); setSelectedSnackIng(null);
                           }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", width: "100%" }}>
-                            Add 1 serve of {r.name}
+                            Add {snackQty} serve{snackQty !== 1 ? "s" : ""} of {r.name}
                           </button>
                         </div>
                       )}
@@ -2286,7 +2304,7 @@ setWeek(prev => {
                         </div>
                         {selectedSnackIng?.name === ing.name && selectedSnackIng?.type === "ingredient" && (
                           <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
-                            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>How much?</div>
+                            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Total qty for whole meal</div>
                             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                               <input type="number" value={snackQty} onChange={e => setSnackQty(parseFloat(e.target.value) || 0)} style={{ width: 80 }} min="0" />
                               <select value={snackUnit} onChange={e => setSnackUnit(e.target.value)} style={{ flex: 1 }}>
