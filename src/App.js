@@ -1241,6 +1241,42 @@ return (
           totalFibre += perServe.fibre;
           totalSugar += perServe.sugar;
           hasMacros = true;
+
+          // Include sides in daily totals
+          const attendingCount = slot.attending?.length || 1;
+          (slot.sides || []).forEach(side => {
+            if (side.type === "recipe") {
+              const sideRecipe = recipes.find(r => r.id === side.id);
+              if (sideRecipe) {
+                const sm = calcMacrosForRecipe(sideRecipe);
+                if (sm) {
+                  const qty = parseFloat(side.qty) || 1;
+                  totalCal += (sm.cal / (sideRecipe.serves || 1)) * qty / attendingCount;
+                  totalProtein += (sm.protein / (sideRecipe.serves || 1)) * qty / attendingCount;
+                  totalCarbs += (sm.carbs / (sideRecipe.serves || 1)) * qty / attendingCount;
+                  totalFat += (sm.fat / (sideRecipe.serves || 1)) * qty / attendingCount;
+                  totalFibre += (sm.fibre / (sideRecipe.serves || 1)) * qty / attendingCount;
+                  totalSugar += (sm.sugar / (sideRecipe.serves || 1)) * qty / attendingCount;
+                  hasMacros = true;
+                }
+              }
+            } else {
+              const ing = getMacros(side.name, standaloneIngredients);
+              if (ing) {
+                const totalGrams = getGramsForUnit(side.name, side.unit, parseFloat(side.qty) || 0);
+                if (totalGrams !== null) {
+                  const scale = (totalGrams / attendingCount) / 100;
+                  totalCal += ing.cal * scale;
+                  totalProtein += ing.protein * scale;
+                  totalCarbs += ing.carbs * scale;
+                  totalFat += ing.fat * scale;
+                  totalFibre += (ing.fibre || 0) * scale;
+                  totalSugar += (ing.sugar || 0) * scale;
+                  hasMacros = true;
+                }
+              }
+            }
+          });
         });
         if (activeUser) {
           const snackKey = `snack_${activeUser}`;
