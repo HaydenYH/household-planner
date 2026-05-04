@@ -963,17 +963,17 @@ return (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 20 }}>{MEAL_ICONS[mt]}</span>
                 <span style={{ fontWeight: 700, fontSize: 16 }}>{mt}</span>
-                {recipe && (
-                  <div style={{ display: "flex", gap: 3, marginLeft: 4 }}>
-                    {MEMBERS.map(m => (
-                      <span key={m} className="dm" style={{ width: 20, height: 20, borderRadius: "50%", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", background: attending.includes(m) ? MEMBER_COLORS[m] : "#1e1c18", color: attending.includes(m) ? "#0c0c0a" : "#444", border: `1px solid ${attending.includes(m) ? MEMBER_COLORS[m] : "#2a2824"}`, transition: "all .15s" }}>{MEMBER_INITIALS[m]}</span>
-                    ))}
-                  </div>
-                )}
+                <button className="meal-pill" onClick={() => { setPickerFor({ day: DAYS[selectedDay], mealType: mt }); setPickerLeftovers(week[DAYS[selectedDay]][mt].leftovers || false); }}>
+                  {recipe ? recipe.name : "+ Add meal"}
+                </button>
               </div>
-              <button className="meal-pill" onClick={() => { setPickerFor({ day: DAYS[selectedDay], mealType: mt }); setPickerLeftovers(week[DAYS[selectedDay]][mt].leftovers || false); }}>
-                {recipe ? recipe.name : "+ Add meal"}
-              </button>
+              {recipe && (
+                <div style={{ display: "flex", gap: 3 }}>
+                  {MEMBERS.map(m => (
+                    <span key={m} className="dm" style={{ width: 20, height: 20, borderRadius: "50%", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", background: attending.includes(m) ? MEMBER_COLORS[m] : "#1e1c18", color: attending.includes(m) ? "#0c0c0a" : "#444", border: `1px solid ${attending.includes(m) ? MEMBER_COLORS[m] : "#2a2824"}`, transition: "all .15s" }}>{MEMBER_INITIALS[m]}</span>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {MEMBERS.map(member => (
