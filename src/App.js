@@ -683,6 +683,11 @@ const [ingredientMacroPopup, setIngredientMacroPopup] = useState(null);
 const [viewingRecipe, setViewingRecipe] = useState(null);
 const [viewingRecipeTab, setViewingRecipeTab] = useState("ingredients");
 const [showBackToTop, setShowBackToTop] = useState(false);
+useEffect(() => {
+  const handleScroll = () => setShowBackToTop(window.scrollY > 200);
+  window.addEventListener("scroll", handleScroll);
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
 const [editingMacros, setEditingMacros] = useState({ cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" });
 
 const loaded = recipesReady && weekReady && shopReady && goalsReady;
@@ -1224,8 +1229,8 @@ return (
 
   {/* ── Recipes View ── */}
 {view === "recipes" && (
-  <div style={{ padding: "14px" }} className="fadeIn" onScroll={e => setShowBackToTop(e.target.scrollTop > 200)}>
-    <div style={{ position: "sticky", top: 0, zIndex: 90, background: "#0c0c0a", paddingBottom: 10, marginBottom: 4, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 10, borderBottom: "1px solid #1a1814" }}>
+  <div style={{ padding: "14px" }} className="fadeIn">
+    <div style={{ position: "sticky", top: 88, zIndex: 90, background: "#0c0c0a", paddingBottom: 10, marginBottom: 4, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 10, borderBottom: "1px solid #1a1814" }}>
     <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
       <button className="btn" onClick={() => setRecipeTab("recipes")}
         style={{ flex: 1, padding: "10px", background: recipeTab === "recipes" ? "#c8a96e" : "#1e1c18", color: recipeTab === "recipes" ? "#0c0c0a" : "#888" }}>
@@ -1257,7 +1262,7 @@ return (
       });
       return (
         <div>
-          <div style={{ position: "sticky", top: 0, zIndex: 89, background: "#0c0c0a", paddingBottom: 10, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 4, borderBottom: "1px solid #1a1814", marginBottom: 14 }}>
+          <div style={{ position: "sticky", top: 158, zIndex: 89, background: "#0c0c0a", paddingBottom: 10, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 4, borderBottom: "1px solid #1a1814", marginBottom: 14 }}>
             <button className="btn" onClick={() => setShowAddIngredient(true)}
               style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%" }}>
               + New Ingredient
@@ -1639,8 +1644,7 @@ return (
 {/* ── Back to Top ── */}
   {view === "recipes" && showBackToTop && (
     <button className="btn" onClick={() => {
-      const el = document.querySelector('.fadeIn');
-      if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }} style={{ position: "fixed", bottom: 90, right: 20, background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", zIndex: 150, boxShadow: "0 4px 12px #0c0c0a88" }}>
       ↑ Top
     </button>
