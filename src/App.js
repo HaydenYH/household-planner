@@ -973,19 +973,7 @@ return (
       {view === "week" && mealsPlanned > 0 && (
         <button className="btn" onClick={generateShoppingList} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>🛒 Shop</button>
       )}
-      {view === "recipes" && (
-        <button className="btn" onClick={() => {
-          if (window.confirm("This will add any missing default recipes. Your existing recipes will not be affected.")) {
-            setRecipes(prev => {
-              const existing = Array.isArray(prev) ? prev : [];
-              const toAdd = DEFAULT_RECIPES.filter(d => !existing.some(e => e.name.toLowerCase() === d.name.toLowerCase()));
-              return [...existing, ...toAdd];
-            });
-          }
-        }} style={{ background: "#2a1a1a", color: "#f44336", border: "1px solid #f4433633", padding: "9px 15px" }}>
-          ↺ Reset
-        </button>
-      )}
+      
     </div>
     {view === "day" && (
       <div style={{ display: "flex", gap: 6, overflowX: "auto", marginTop: 14, paddingBottom: 2 }}>
