@@ -1027,6 +1027,43 @@ return (
       {view === "week" && mealsPlanned > 0 && (
         <button className="btn" onClick={generateShoppingList} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>🛒 Shop</button>
       )}
+      {view === "recipes" && recipeTab === "ingredients" && (
+        <button className="btn" onClick={() => {
+          if (window.confirm("This will update categories for all ingredients based on the latest rules. Your macros and brands won't be affected.")) {
+            const categoryMap = {
+              "high protein pasta": "Pasta",
+              "chocolate protein powder": "Other",
+              "black chia seeds": "Snacks & Treats",
+              "green pesto": "Sauces & Spices",
+              "green curry paste": "Sauces & Spices",
+              "fish sauce": "Sauces & Spices",
+              "brown sugar": "Sauces & Spices",
+              "black pepper": "Sauces & Spices",
+              "passata": "Sauces & Spices",
+              "olive oil": "Sauces & Spices",
+              "coconut milk": "Canned & Jarred",
+              "black beans": "Canned & Jarred",
+              "crushed tomatoes": "Canned & Jarred",
+              "tuna in spring water": "Canned & Jarred",
+              "corn": "Canned & Jarred",
+            };
+            setRecipes(prev => (Array.isArray(prev) ? prev : []).map(recipe => ({
+              ...recipe,
+              ingredients: recipe.ingredients.map(ing => {
+                const newCat = categoryMap[ing.name.toLowerCase()];
+                return newCat ? { ...ing, category: newCat } : ing;
+              })
+            })));
+            setStandaloneIngredients(prev => (Array.isArray(prev) ? prev : []).map(ing => {
+              const newCat = categoryMap[ing.name.toLowerCase()];
+              return newCat ? { ...ing, category: newCat } : ing;
+            }));
+            alert("Categories updated!");
+          }
+        }} style={{ background: "#2a1a1a", color: "#f44336", border: "1px solid #f4433633", padding: "9px 15px" }}>
+          ↺ Fix Categories
+        </button>
+      )}
       
     </div>
     {view === "day" && (
@@ -1403,12 +1440,13 @@ return (
       const allIngredients = [];
       recipes.forEach(r => r.ingredients.forEach(i => {
         if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
-          allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+          const override = (standaloneIngredients || []).find(s => s.name.toLowerCase() === i.name.toLowerCase());
+          allIngredients.push({ name: i.name, store: override?.store || i.store, category: override?.category || i.category || guessCategory(i.name), brand: override?.brand || "" });
         }
       }));
       (standaloneIngredients || []).forEach(i => {
         if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
-          allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+          allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name), brand: i.brand || "" });
         }
       });
       return (
@@ -1465,7 +1503,7 @@ return (
   const macros = m || { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" };
   const existingIng = (standaloneIngredients || []).find(i => i.name.toLowerCase() === ing.name.toLowerCase());
   setIngredientMacroPopup({ name: ing.name, brand: existingIng?.brand || "", ...macros });
-  setEditingMacros({ cal: macros.cal ?? "", protein: macros.protein ?? "", carbs: macros.carbs ?? "", fat: macros.fat ?? "", fibre: macros.fibre ?? "", sugar: macros.sugar ?? "", brand: existingIng?.brand || "" });
+  setEditingMacros({ cal: macros.cal ?? "", protein: macros.protein ?? "", carbs: macros.carbs ?? "", fat: macros.fat ?? "", fibre: macros.fibre ?? "", sugar: macros.sugar ?? "", brand: existingIng?.brand || "", category: existingIng?.category || ing.category || guessCategory(ing.name) });
 }}
                       style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none", cursor: "pointer" }}>
                       <div>
@@ -2155,7 +2193,8 @@ return (
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Brand <span style={{ color: "#444" }}>(optional)</span></div>
           <input value={editingMacros.brand ?? ""} onChange={e => setEditingMacros(p => ({ ...p, brand: e.target.value }))} placeholder="e.g. Woolworths" style={{ width: "100%" }} />
         </div>
-        <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
+                <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
           {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
             <div key={key}>
@@ -2177,13 +2216,14 @@ return (
               sugar: parseFloat(editingMacros.sugar) || 0,
             };
             const brand = editingMacros.brand?.trim() || "";
+            const category = editingMacros.category || guessCategory(name);
             setStandaloneIngredients(prev => {
               const list = Array.isArray(prev) ? prev : [];
               const exists = list.find(i => i.name.toLowerCase() === name.toLowerCase());
               if (exists) {
-                return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, brand, macros: parsedMacros } : i);
+                return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, brand, category, macros: parsedMacros } : i);
               } else {
-                return [...list, { name, brand, store: "Woolworths", category: guessCategory(name), macros: parsedMacros }];
+                return [...list, { name, brand, store: "Woolworths", category, macros: parsedMacros }];
               }
             });
             setIngredientMacroPopup(null);
