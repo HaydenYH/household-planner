@@ -2264,25 +2264,24 @@ setWeek(prev => {
                       </div>
                       {selectedSnackIng?.id === r.id && (
                         <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
-                          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>How many serves?</div>
-                          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                            <input type="number" value={snackQty} onChange={e => setSnackQty(parseFloat(e.target.value) || 1)} style={{ width: 80 }} min="1" step="1" />
-                            <div className="dm" style={{ fontSize: 13, color: "#555", display: "flex", alignItems: "center" }}>serves</div>
+                          <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 10 }}>
+                            Will be added for all attending members.
                           </div>
                           <button className="btn" onClick={() => {
+                            const attending = week[sidesPickerFor.day]?.[sidesPickerFor.mealType]?.attending?.length || 1;
                             setWeek(prev => ({
                               ...prev,
                               [sidesPickerFor.day]: {
                                 ...prev[sidesPickerFor.day],
                                 [sidesPickerFor.mealType]: {
                                   ...prev[sidesPickerFor.day][sidesPickerFor.mealType],
-                                  sides: [...(prev[sidesPickerFor.day][sidesPickerFor.mealType].sides || []), { type: "recipe", id: r.id, name: r.name, qty: snackQty, unit: "serves" }]
+                                  sides: [...(prev[sidesPickerFor.day][sidesPickerFor.mealType].sides || []), { type: "recipe", id: r.id, name: r.name, qty: attending, unit: "serves" }]
                                 }
                               }
                             }));
                             setSidesPickerFor(null); setSelectedSnackIng(null);
                           }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", width: "100%" }}>
-                            Add {snackQty} serve{snackQty !== 1 ? "s" : ""} of {r.name}
+                            Add {r.name} for all
                           </button>
                         </div>
                       )}
