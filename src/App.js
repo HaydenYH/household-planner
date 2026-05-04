@@ -999,7 +999,7 @@ return (
   )}
 
   {/* ── Header ── */}
-  <div style={{ padding: "22px 20px 14px", borderBottom: "1px solid #1a1814", position: "sticky", top: 0, zIndex: 100, background: "#0c0c0a" }}>
+  <div style={{ padding: "22px 20px 14px", borderBottom: "1px solid #1a1814", position: "sticky", top: 0, zIndex: 100, background: "#0c0c0a", boxShadow: "0 4px 12px #0c0c0a" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
       <div>
         <div className="dm" style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#555", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}>
@@ -1573,7 +1573,7 @@ return (
   {/* ── Shopping View ── */}
 {view === "shopping" && (
   <div style={{ padding: "14px" }} className="fadeIn">
-    <div style={{ position: "sticky", top: "var(--header-height, 110px)", zIndex: 90, background: "#0c0c0a", paddingBottom: 10, marginBottom: 4 }}>
+    <div style={{ position: "sticky", top: 76, zIndex: 90, background: "#0c0c0a", paddingBottom: 10, marginBottom: 4, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 10, borderBottom: "1px solid #1a1814" }}>
 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0, gap: 8 }}>
       <button className="btn" onClick={() => setShowAddShoppingItem(true)} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>+ Custom item</button>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -2193,7 +2193,13 @@ return (
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Brand <span style={{ color: "#444" }}>(optional)</span></div>
           <input value={editingMacros.brand ?? ""} onChange={e => setEditingMacros(p => ({ ...p, brand: e.target.value }))} placeholder="e.g. Woolworths" style={{ width: "100%" }} />
         </div>
-                <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
+                <div style={{ marginBottom: 14 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Category</div>
+          <select value={editingMacros.category || guessCategory(ingredientMacroPopup.name)} onChange={e => setEditingMacros(p => ({ ...p, category: e.target.value }))} style={{ width: "100%" }}>
+            {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICONS[c]} {c}</option>)}
+          </select>
+        </div>
+        <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
           {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
