@@ -1227,11 +1227,24 @@ return (
                 <div>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>{r.name}</span>
                   <span className="dm" style={{ fontSize: 11, color: "#555", marginLeft: 8 }}>serves {r.serves || "?"}</span>
-                  <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                    {(r.types || [r.type]).map(t => (
-                      <span key={t} className="dm" style={{ fontSize: 9, background: "#1e1c18", color: "#c8a96e", border: "1px solid #c8a96e33", borderRadius: 100, padding: "2px 7px" }}>{t}</span>
-                    ))}
-                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+  {(r.types || [r.type]).map(t => (
+    <span key={t} className="dm" style={{ fontSize: 9, background: "#1e1c18", color: "#c8a96e", border: "1px solid #c8a96e33", borderRadius: 100, padding: "2px 7px" }}>{t}</span>
+  ))}
+  {(() => {
+    const m = calcMacrosForRecipe(r);
+    if (!m) return null;
+    const perServe = { cal: Math.round(m.cal / (r.serves || 1)), protein: Math.round(m.protein / (r.serves || 1)) };
+    return (
+      <>
+        <span className="dm" style={{ fontSize: 9, color: "#555" }}>·</span>
+        <span className="dm" style={{ fontSize: 9, color: "#c8a96e", fontWeight: 700 }}>{perServe.cal} cal</span>
+        <span className="dm" style={{ fontSize: 9, color: "#5c9fe0", fontWeight: 700 }}>{perServe.protein}g P</span>
+        <span className="dm" style={{ fontSize: 9, color: "#555" }}>/ serve</span>
+      </>
+    );
+  })()}
+</div>
                 </div>
                 <button className="btn" onClick={() => setEditingRecipe({ ...r, types: r.types || [r.type], ingredients: processIngredientsForEdit(r.ingredients.map(i => ({ ...i, qty: i.qty || 0, unit: i.unit || "", customUnit: "" }))) })}
                   style={{ background: "#1e2a3a", color: "#5c9fe0", padding: "5px 11px", fontSize: 10 }}>
