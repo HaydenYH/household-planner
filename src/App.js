@@ -39,22 +39,24 @@ console.warn("Supabase fetch failed:", err);
 return null;
 }
 },
-async set(key, value) {
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-try {
-await fetch(`${SUPABASE_URL}/rest/v1/household_data`, {
-method: "POST",
-headers: {
-apikey: SUPABASE_ANON_KEY,
-Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-"Content-Type": "application/json",
-Prefer: "resolution=merge-duplicates",
-},
-body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
-});
-} catch (err) {
-console.warn("Supabase set failed:", err);
-}
+async set(key, value, updatedBy = null) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  try {
+    const payload = { key, value, updated_at: new Date().toISOString() };
+    if (updatedBy) payload.updated_by = updatedBy;
+    await fetch(`${SUPABASE_URL}/rest/v1/household_data`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.warn("Supabase set failed:", err);
+  }
 },
 subscribe(key, callback) {
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return () => {};
@@ -80,6 +82,11 @@ return () => {};
 }
 },
 };
+
+// ── User identity ─────────────────────────────────────────────────────────────
+const ACTIVE_USER_KEY = "hh_active_user";
+function getSavedUser() { try { return localStorage.getItem(ACTIVE_USER_KEY) || null; } catch { return null; } }
+function saveUser(name) { try { localStorage.setItem(ACTIVE_USER_KEY, name); } catch {} }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MEMBERS = ["Hayden", "Eilish", "Tyran"];
@@ -424,7 +431,7 @@ return next;
 }
 
 // ── useSharedState hook ───────────────────────────────────────────────────────
-function useSharedState(key, defaultValue) {
+function useSharedState(key, defaultValue, onRemoteChange) {
 const [state, setState] = useState(defaultValue);
 const [synced, setSynced] = useState(false);
 const localRef = useRef(false);
@@ -439,22 +446,27 @@ setSynced(true);
 }, [key]);
 
 useEffect(() => {
-const unsub = sb.subscribe(key, (val) => {
-if (!localRef.current) setState(val);
+const unsub = sb.subscribe(key, (val, meta) => {
+  if (!localRef.current) {
+    setState(val);
+    if (meta?.updatedBy) {
+      onRemoteChange?.(key, meta.updatedBy);
+    }
+  }
 });
 return unsub;
 }, [key]);
 
-const setAndSave = useCallback((updater) => {
-setState(prev => {
-const next = typeof updater === "function" ? updater(prev) : updater;
-localRef.current = true;
-clearTimeout(saveTimer.current);
-saveTimer.current = setTimeout(() => {
-sb.set(key, next).finally(() => { localRef.current = false; });
-}, 400);
-return next;
-});
+const setAndSave = useCallback((updater, activeUserName = null) => {
+  setState(prev => {
+    const next = typeof updater === "function" ? updater(prev) : updater;
+    localRef.current = true;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      sb.set(key, next, activeUserName).finally(() => { localRef.current = false; });
+    }, 400);
+    return next;
+  });
 }, [key]);
 
 return [state, setAndSave, synced];
@@ -659,16 +671,28 @@ return (
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
+const [activeUserName, setActiveUserName] = useState(() => getSavedUser());
+const [conflictBanner, setConflictBanner] = useState(null);
+const bannerTimer = useRef(null);
+
+function handleRemoteChange(key, who) {
+  if (who === activeUserName) return;
+  const label = key === "recipes" ? "the recipe book" : key === "shopping" ? "the shopping list" : key.startsWith("week-") ? "the weekly planner" : key === "goals" ? "the goals" : key === "ingredients" ? "the ingredients" : key;
+  setConflictBanner({ who, label });
+  clearTimeout(bannerTimer.current);
+  bannerTimer.current = setTimeout(() => setConflictBanner(null), 10000);
+}
+
 const [view, setView] = useState("week");
 const [selectedDay, setSelectedDay] = useState(0);
 const [weekStart, setWeekStart] = useState(getWeekStart());
 const defaultWeek = useMemo(() => buildEmptyWeek(), []);
 
-const [recipes, setRecipes, recipesReady] = useSharedState("recipes", DEFAULT_RECIPES);
-const [week, setWeek, weekReady] = useSharedState(getWeekKey(weekStart), defaultWeek);
-const [shoppingList, setShoppingList, shopReady] = useSharedState("shopping", []);
-const [goals, setGoals, goalsReady] = useSharedState("goals", buildEmptyGoals());
-const [standaloneIngredients, setStandaloneIngredients] = useSharedState("ingredients", []);
+const [recipes, setRecipes, recipesReady] = useSharedState("recipes", DEFAULT_RECIPES, handleRemoteChange);
+const [week, setWeek, weekReady] = useSharedState(getWeekKey(weekStart), defaultWeek, handleRemoteChange);
+const [shoppingList, setShoppingList, shopReady] = useSharedState("shopping", [], handleRemoteChange);
+const [goals, setGoals, goalsReady] = useSharedState("goals", buildEmptyGoals(), handleRemoteChange);
+const [standaloneIngredients, setStandaloneIngredients] = useSharedState("ingredients", [], handleRemoteChange);
 
 const [pickerFor, setPickerFor] = useState(null);
 const [pickerLeftovers, setPickerLeftovers] = useState(false);
@@ -1024,6 +1048,38 @@ return (
 <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap'); *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;} ::-webkit-scrollbar{display:none;} body{background:#0c0c0a;} .dm{font-family:'DM Sans',sans-serif;} .btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;border:none;border-radius:100px;cursor:pointer;transition:all .15s;} .card{background:#161512;border-radius:18px;border:1px solid #252320;transition:border-color .2s;} .card:hover{border-color:#353230;} .chip{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:4px 11px;border-radius:100px;cursor:pointer;transition:all .15s;border:1.5px solid transparent;} .chip.on{background:#c8a96e;color:#0c0c0a;border-color:#c8a96e;} .chip.off{background:transparent;color:#555;border-color:#2a2824;} .meal-pill{font-family:'DM Sans',sans-serif;font-size:12px;background:#1e1c18;color:#c8a96e;border:1px solid #c8a96e33;border-radius:100px;padding:4px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;} .nav-btn{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:100px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;} .nav-btn.active{background:#c8a96e1a;color:#c8a96e;} .nav-btn.inactive{color:#444;} .overlay{position:fixed;inset:0;background:#0c0c0aee;z-index:200;display:flex;align-items:flex-end;} .sheet{background:#161512;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px;border-top:1px solid #252320;} input,select{background:#0c0c0a;border:1.5px solid #252320;border-radius:10px;color:#ede8d8;padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;-webkit-appearance:none;} input:focus,select:focus{border-color:#c8a96e55;} input,select,textarea{font-size:16px!important;} .sheet{scroll-padding-bottom:300px;} select option{background:#161512;} .day-tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:100px;border:none;cursor:pointer;transition:all .15s;} .day-tab.active{background:#c8a96e;color:#0c0c0a;} .day-tab.inactive{background:#1a1814;color:#666;} .fadeIn{animation:fadeIn .2s ease;} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} .pulse{animation:pulse 1.5s infinite;} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}} .check-box{width:22px;height:22px;border-radius:7px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;} .goal-day-btn{font-family:'DM Sans',sans-serif;font-size:9px;font-weight:700;width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}`}</style>
 
 
+  {/* ── User Picker ── */}
+  {!activeUserName && (
+    <div style={{ position: "fixed", inset: 0, background: "#0c0c0aee", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: "#161512", borderRadius: 24, padding: 28, width: "100%", maxWidth: 360, border: "1px solid #252320" }}>
+        <h2 style={{ margin: "0 0 6px", fontSize: 22 }}>Who are you? 👋</h2>
+        <div className="dm" style={{ fontSize: 13, color: "#555", marginBottom: 24 }}>This device will remember your choice.</div>
+        {MEMBERS.map(m => (
+          <button key={m} className="btn" onClick={() => { saveUser(m); setActiveUserName(m); }}
+            style={{ display: "block", width: "100%", padding: "14px", marginBottom: 10, background: "#1e1c18", color: MEMBER_COLORS[m], border: `1.5px solid ${MEMBER_COLORS[m]}44`, fontSize: 15, textTransform: "none", letterSpacing: 0 }}>
+            {m}
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {/* ── Conflict Banner ── */}
+  {conflictBanner && (
+    <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, zIndex: 250, padding: "0 14px", paddingTop: 8 }}>
+      <div style={{ background: "#2a1f0a", border: "1px solid #ff980088", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 16 }}>⚠️</span>
+        <div className="dm" style={{ flex: 1, fontSize: 12, color: "#ff9800", lineHeight: 1.4 }}>
+          <strong>{conflictBanner.who}</strong> just updated {conflictBanner.label} — your unsaved changes may conflict.
+        </div>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <button className="btn" onClick={() => window.location.reload()} style={{ background: "#ff980022", color: "#ff9800", padding: "5px 10px", fontSize: 10, border: "1px solid #ff980044" }}>Refresh</button>
+          <button className="btn" onClick={() => setConflictBanner(null)} style={{ background: "#1e1c18", color: "#555", padding: "5px 10px", fontSize: 10 }}>Dismiss</button>
+        </div>
+      </div>
+    </div>
+  )}
+
   {/* ── Setup Banner ── */}
   {notConfigured && (
     <div style={{ background: "#2a1a0a", border: "1px solid #c8a96e55", borderRadius: 12, margin: "12px 14px 0", padding: "12px 14px" }}>
@@ -1040,6 +1096,12 @@ return (
           {weekStart.toLocaleDateString("en-AU", { day: "numeric", month: "long" })} — Household
           {!loaded && <span className="dm pulse" style={{ fontSize: 9, color: "#c8a96e" }}>syncing...</span>}
           {loaded && !notConfigured && <span className="dm" style={{ fontSize: 9, color: "#4caf50" }}>● live</span>}
+{activeUserName && (
+  <span className="dm" onClick={() => { saveUser(""); setActiveUserName(null); }}
+    style={{ fontSize: 9, color: "#555", marginLeft: 8, cursor: "pointer", textDecoration: "underline" }}>
+    ({activeUserName}) switch
+  </span>
+)}
         </div>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: "-.02em" }}>
           {view === "week" ? "Weekly Planner" : view === "day" ? FULL_DAYS[selectedDay] : view === "recipes" ? "Recipe Book" : view === "shopping" ? "Shopping List" : "Weekly Goals"}
@@ -1061,44 +1123,7 @@ return (
       {view === "week" && mealsPlanned > 0 && (
         <button className="btn" onClick={generateShoppingList} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>🛒 Shop</button>
       )}
-      {view === "recipes" && recipeTab === "ingredients" && (
-        <button className="btn" onClick={() => {
-          if (window.confirm("This will update categories for all ingredients based on the latest rules. Your macros and brands won't be affected.")) {
-            const categoryMap = {
-              "high protein pasta": "Pasta",
-              "chocolate protein powder": "Other",
-              "black chia seeds": "Snacks & Treats",
-              "green pesto": "Sauces & Spices",
-              "green curry paste": "Sauces & Spices",
-              "fish sauce": "Sauces & Spices",
-              "brown sugar": "Sauces & Spices",
-              "black pepper": "Sauces & Spices",
-              "passata": "Sauces & Spices",
-              "olive oil": "Sauces & Spices",
-              "coconut milk": "Canned & Jarred",
-              "black beans": "Canned & Jarred",
-              "crushed tomatoes": "Canned & Jarred",
-              "tuna in spring water": "Canned & Jarred",
-              "corn": "Canned & Jarred",
-            };
-            setRecipes(prev => (Array.isArray(prev) ? prev : []).map(recipe => ({
-              ...recipe,
-              ingredients: recipe.ingredients.map(ing => {
-                const newCat = categoryMap[ing.name.toLowerCase()];
-                return newCat ? { ...ing, category: newCat } : ing;
-              })
-            })));
-            setStandaloneIngredients(prev => (Array.isArray(prev) ? prev : []).map(ing => {
-              const newCat = categoryMap[ing.name.toLowerCase()];
-              return newCat ? { ...ing, category: newCat } : ing;
-            }));
-            alert("Categories updated!");
-          }
-        }} style={{ background: "#2a1a1a", color: "#f44336", border: "1px solid #f4433633", padding: "9px 15px" }}>
-          ↺ Fix Categories
-        </button>
-      )}
-      
+           
     </div>
     {view === "day" && (
       <div style={{ display: "flex", gap: 6, overflowX: "auto", marginTop: 14, paddingBottom: 2 }}>
