@@ -140,10 +140,20 @@ const MACRO_DB = {
   "black beans":              { cal: 111, carbs: 15.8, fat: 0.7,  protein: 7.8,  fibre: 8.7, sugar: 0 },
   "corn":                     { cal: 77,  carbs: 13.5, fat: 1.6,  protein: 2,    fibre: 2,   sugar: 0 },
   "cherry tomatoes":          { cal: 18,  carbs: 4,    fat: 0,    protein: 0,    fibre: 1.2, sugar: 0 },
-  "beef mince":               { cal: 174, carbs: 0.5,  fat: 8,    protein: 21.9, fibre: 0,   sugar: 0 },
+  "beef mince (10% lean)":    { cal: 151, carbs: 0,    fat: 8.5,  protein: 19.5, fibre: 0,   sugar: 0 },
   "egg":                      { cal: 140, carbs: 1,    fat: 10,   protein: 12,   fibre: 0,   sugar: 0 },
   "tuna in spring water":     { cal: 104, carbs: 0,    fat: 0.7,  protein: 24.5, fibre: 0,   sugar: 0 },
   "lite milk":                { cal: 45,  carbs: 5,    fat: 1.5,  protein: 3.5,  fibre: 0,   sugar: 5 },
+  "lime":                     { cal: 30,  carbs: 10.5, fat: 0.2,  protein: 0.7,  fibre: 2.8, sugar: 1.7 },
+  "garlic":                   { cal: 149, carbs: 33,   fat: 0.5,  protein: 6.4,  fibre: 2.1, sugar: 1 },
+  "olive oil":                { cal: 884, carbs: 0,    fat: 100,  protein: 0,    fibre: 0,   sugar: 0 },
+  "coriander":                { cal: 23,  carbs: 3.7,  fat: 0.5,  protein: 2.1,  fibre: 2.8, sugar: 0 },
+  "fish sauce":               { cal: 35,  carbs: 5,    fat: 0,    protein: 5,    fibre: 0,   sugar: 4 },
+  "black pepper":             { cal: 255, carbs: 64,   fat: 3.3,  protein: 10,   fibre: 25,  sugar: 0 },
+  "crushed tomatoes":         { cal: 32,  carbs: 5.5,  fat: 0.3,  protein: 1.5,  fibre: 1.5, sugar: 4 },
+  "passata":                  { cal: 28,  carbs: 4.8,  fat: 0.2,  protein: 1.3,  fibre: 1.2, sugar: 3.5 },
+  "carrot":                   { cal: 41,  carbs: 10,   fat: 0.2,  protein: 0.9,  fibre: 2.8, sugar: 5 },
+  "zucchini":                 { cal: 17,  carbs: 3.1,  fat: 0.3,  protein: 1.2,  fibre: 1,   sugar: 2.5 },
 };
 
 function getMacros(name, standaloneIngs = []) {
@@ -165,6 +175,10 @@ const GRAMS_PER_UNIT = {
   "green curry paste":   { jar: 114 },
   "coconut milk":        { cans: 400 },
   "egg":                 { whole: 60 },
+  "lime":                { whole: 67 },
+  "garlic":              { cloves: 5 },
+  "carrot":              { whole: 80 },
+  "zucchini":            { whole: 200 },
 };
 
 function getGramsForUnit(name, unit, qty) {
@@ -325,6 +339,42 @@ const DEFAULT_RECIPES = [
     { name: "Corn", qty: 167, unit: "g", store: "Aldi", category: "Vegetables" },
     { name: "Light Greek Yoghurt", qty: 100, unit: "g", store: "Aldi", category: "Bread / Dairy" },
     { name: "Cherry Tomatoes", qty: 167, unit: "g", store: "Woolworths", category: "Vegetables" },
+  ]},
+{ id: 5, name: "Lime Chicken", types: ["Lunch", "Dinner"], serves: 3, cookedInOil: true, ingredients: [
+    { name: "Chicken Breast", qty: 600, unit: "g", store: "Costco", category: "Meat" },
+    { name: "Lime", qty: 1, unit: "whole", store: "Woolworths", category: "Vegetables" },
+    { name: "Garlic", qty: 2, unit: "cloves", store: "Woolworths", category: "Vegetables" },
+    { name: "Brown Sugar", qty: 3, unit: "tbsp", store: "Aldi", category: "Other" },
+    { name: "Olive Oil", qty: 1, unit: "tbsp", store: "Woolworths", category: "Other" },
+    { name: "Coriander", qty: 2, unit: "tbsp", store: "Woolworths", category: "Vegetables" },
+    { name: "Fish Sauce", qty: 1, unit: "tbsp", store: "Woolworths", category: "Other" },
+    { name: "Black Pepper", qty: 0.25, unit: "tsp", store: "Woolworths", category: "Other" },
+  ], steps: [
+    "Pound the thick end of each chicken breast to about 1.7cm thickness for even cooking.",
+    "Mix lime zest, lime juice, garlic, brown sugar, fish sauce, olive oil and pepper in a bowl to make the marinade.",
+    "Place chicken and marinade in a ziplock bag. Massage to coat evenly. Refrigerate for 24 hours (minimum 12 hrs, maximum 48 hrs).",
+    "Remove chicken from marinade and discard the marinade.",
+    "Brush BBQ grills with oil and heat to medium-high (or medium if your BBQ runs hot). Cook chicken for 3 minutes each side until caramelised and cooked through (internal temp 75°C).",
+    "Transfer to a plate, cover loosely with foil and rest for 3 minutes.",
+    "Garnish with extra coriander, lime wedges and chilli if desired. Serve immediately.",
+  ]},
+  { id: 6, name: "Spaghetti Bolognaise", types: ["Lunch", "Dinner"], serves: 3, cookedInOil: true, ingredients: [
+    { name: "Beef Mince (10% Lean)", qty: 500, unit: "g", store: "Costco", category: "Meat" },
+    { name: "High Protein Pasta", qty: 0.4, unit: "packet", store: "Woolworths", category: "Bread / Dairy" },
+    { name: "Crushed Tomatoes", qty: 1, unit: "cans", store: "Woolworths", category: "Other" },
+    { name: "Passata", qty: 1, unit: "tbsp", store: "Woolworths", category: "Other" },
+    { name: "Carrot", qty: 1, unit: "whole", store: "Woolworths", category: "Vegetables" },
+    { name: "Zucchini", qty: 1, unit: "whole", store: "Woolworths", category: "Vegetables" },
+    { name: "Bacon", qty: 2, unit: "slices", store: "Costco", category: "Meat" },
+  ], steps: [
+    "Heat olive oil in a large pot over medium-high heat. Add bacon and cook until golden, then remove and set aside.",
+    "Add beef mince to the same pot and cook, breaking it up, until browned all over. Drain excess fat if needed.",
+    "Add carrot and zucchini and cook for 3-4 minutes until softened.",
+    "Add crushed tomatoes and passata. Stir to combine.",
+    "Return bacon to the pot. Season with salt and pepper.",
+    "Reduce heat to low and simmer uncovered for 20-25 minutes, stirring occasionally, until sauce thickens.",
+    "Meanwhile, cook pasta in a large pot of salted boiling water according to packet directions. Drain.",
+    "Serve sauce over pasta.",
   ]},
 ];
 
