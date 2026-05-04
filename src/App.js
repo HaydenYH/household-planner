@@ -2075,7 +2075,7 @@ return (
           <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Whole unit conversion <span style={{ color: "#444" }}>(optional)</span></div>
           <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 8 }}>If sold/measured as "whole" (e.g. 1 apple), enter the weight of 1 whole item</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <select id="conversionFromUnit" defaultValue={existing?.conversionUnit || "whole"} style={{ width: 90 }}>
+            <select id="conversionFromUnit" defaultValue="whole" style={{ width: 90 }}>
                   {["whole", "slices", "cans", "jar", "packet", "scoops", "cups"].map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
                 <span className="dm" style={{ fontSize: 13, color: "#555", whiteSpace: "nowrap" }}>=</span>
