@@ -696,6 +696,7 @@ const [showBackToTop, setShowBackToTop] = useState(false);
 const [sidesPickerFor, setSidesPickerFor] = useState(null);
 const [sidesSearch, setSidesSearch] = useState("");
 const [showMissingMacrosOnly, setShowMissingMacrosOnly] = useState(false);
+const [ingredientPopupTab, setIngredientPopupTab] = useState("macros");
 const [ingredientSearch, setIngredientSearch] = useState("");
 
 useEffect(() => {
@@ -724,7 +725,7 @@ useEffect(() => { recipesRef.current = recipes; }, [recipes]);
 
 useEffect(() => {
   if (!loaded) return;
-  const generated = buildShoppingListFromWeek(week, recipesRef.current);
+  const generated = buildShoppingListFromWeek(week, recipesRef.current, standaloneIngredients);
   setShoppingList(prev => mergeGeneratedShoppingList(generated, prev));
 }, [loaded, week]);
 
@@ -810,7 +811,7 @@ setShowAddShoppingItem(false);
 setNewShoppingItem({ name: "", qty: "", unit: "", store: "Woolworths" });
 }
 
-function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
+function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes, currentStandaloneIngredients = []) {
   const consolidated = {};
   DAYS.forEach(day => {
     // Regular meals
@@ -846,7 +847,22 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
           };
         }
        consolidated[key].category = ing.category || guessCategory(ing.name);
-        consolidated[key].quantities.push({ qty: ing.qty * scale, unit: ing.unit || "" });
+        // Convert to whole if conversion exists and unit is g or ml
+        const standaloneIng = (currentStandaloneIngredients || []).find(s => s.name.toLowerCase() === ing.name.toLowerCase());
+        const hardcodedWhole = GRAMS_PER_UNIT[ing.name.toLowerCase()]?.whole;
+        const gramsPerWhole = standaloneIng?.gramsPerWhole || hardcodedWhole || null;
+        const wholeUnit = standaloneIng?.wholeUnit || "g";
+        if (gramsPerWhole && (ing.unit === "g" || ing.unit === "ml" || ing.unit === "kg" || ing.unit === "L")) {
+          const totalGrams = getGramsForUnit(ing.name, ing.unit, ing.qty * scale);
+          if (totalGrams !== null) {
+            const wholeCount = parseFloat((totalGrams / gramsPerWhole).toFixed(2));
+            consolidated[key].quantities.push({ qty: wholeCount, unit: "whole" });
+          } else {
+            consolidated[key].quantities.push({ qty: ing.qty * scale, unit: ing.unit || "" });
+          }
+        } else {
+          consolidated[key].quantities.push({ qty: ing.qty * scale, unit: ing.unit || "" });
+        }
       });
       // Add sides to shopping list
       (slot.sides || []).forEach(side => {
@@ -903,7 +919,8 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes) {
 }
 
 function generateShoppingList(switchView = true) {
-  const list = buildShoppingListFromWeek(week);
+  consolidated[key].category = ing.category || guessCategory(ing.name);
+        consolidated[key].quantities.push({ qty: ing.qty * scale, unit: ing.unit || "" });
   setShoppingList(prev => mergeGeneratedShoppingList(list, prev));
   if (switchView) setView("shopping");
 }
@@ -1451,7 +1468,7 @@ return (
       });
       return (
         <div>
-          <div style={{ position: "sticky", top: 158, zIndex: 89, background: "#0c0c0a", paddingBottom: 10, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 4, borderBottom: "1px solid #1a1814", marginBottom: 14 }}>
+          <div style={{ position: "sticky", top: 158, zIndex: 89, background: "#0c0c0a", paddingBottom: 10, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 4, borderBottom: "1px solid #1a1814", marginBottom: 14, boxShadow: "0 4px 12px #0c0c0a" }}>
             <button className="btn" onClick={() => setShowAddIngredient(true)}
               style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 8 }}>
               + New Ingredient
@@ -1504,6 +1521,7 @@ return (
   const existingIng = (standaloneIngredients || []).find(i => i.name.toLowerCase() === ing.name.toLowerCase());
   setIngredientMacroPopup({ name: ing.name, brand: existingIng?.brand || "", ...macros });
   setEditingMacros({ cal: macros.cal ?? "", protein: macros.protein ?? "", carbs: macros.carbs ?? "", fat: macros.fat ?? "", fibre: macros.fibre ?? "", sugar: macros.sugar ?? "", brand: existingIng?.brand || "", category: existingIng?.category || ing.category || guessCategory(ing.name) });
+  setIngredientPopupTab("macros");
 }}
                       style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none", cursor: "pointer" }}>
                       <div>
@@ -2185,67 +2203,151 @@ return (
   {ingredientMacroPopup && (
     <div className="overlay" onClick={() => setIngredientMacroPopup(null)}>
       <div className="sheet" onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: 18 }}>{ingredientMacroPopup.name}</h2>
           <button onClick={() => setIngredientMacroPopup(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
         </div>
-        <div style={{ marginBottom: 14 }}>
-          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Brand <span style={{ color: "#444" }}>(optional)</span></div>
-          <input value={editingMacros.brand ?? ""} onChange={e => setEditingMacros(p => ({ ...p, brand: e.target.value }))} placeholder="e.g. Woolworths" style={{ width: "100%" }} />
-        </div>
-                <div style={{ marginBottom: 14 }}>
-          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Category</div>
-          <select value={editingMacros.category || guessCategory(ingredientMacroPopup.name)} onChange={e => setEditingMacros(p => ({ ...p, category: e.target.value }))} style={{ width: "100%" }}>
-            {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICONS[c]} {c}</option>)}
-          </select>
-        </div>
-        <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
-          {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
-            <div key={key}>
-              <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>{label}</div>
-              <input type="number" min="0" value={editingMacros[key] ?? ""} onChange={e => setEditingMacros(p => ({ ...p, [key]: e.target.value }))}
-                placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
-            </div>
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+          {[["macros", "📊 Macros"], ["conversions", "⚖️ Conversions"], ["recipes", "📖 Used In"]].map(([tab, label]) => (
+            <button key={tab} className="btn" onClick={() => setIngredientPopupTab(tab)}
+              style={{ flex: 1, padding: "8px 4px", background: ingredientPopupTab === tab ? "#c8a96e" : "#1e1c18", color: ingredientPopupTab === tab ? "#0c0c0a" : "#888", fontSize: 10 }}>
+              {label}
+            </button>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn" onClick={() => {
-            const name = ingredientMacroPopup.name;
-            const parsedMacros = {
-              cal: parseFloat(editingMacros.cal) || 0,
-              protein: parseFloat(editingMacros.protein) || 0,
-              carbs: parseFloat(editingMacros.carbs) || 0,
-              fat: parseFloat(editingMacros.fat) || 0,
-              fibre: parseFloat(editingMacros.fibre) || 0,
-              sugar: parseFloat(editingMacros.sugar) || 0,
-            };
-            const brand = editingMacros.brand?.trim() || "";
-            const category = editingMacros.category || guessCategory(name);
-            setStandaloneIngredients(prev => {
-              const list = Array.isArray(prev) ? prev : [];
-              const exists = list.find(i => i.name.toLowerCase() === name.toLowerCase());
-              if (exists) {
-                return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, brand, category, macros: parsedMacros } : i);
-              } else {
-                return [...list, { name, brand, store: "Woolworths", category, macros: parsedMacros }];
-              }
-            });
-            setIngredientMacroPopup(null);
-          }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", flex: 1 }}>
-            Save
-          </button>
-          <button className="btn" onClick={() => {
-            const name = ingredientMacroPopup.name;
-            if (window.confirm(`Delete "${name}" from your ingredient database?`)) {
-              setStandaloneIngredients(prev => (Array.isArray(prev) ? prev : []).filter(i => i.name.toLowerCase() !== name.toLowerCase()));
+
+        {/* ── Macros tab ── */}
+        {ingredientPopupTab === "macros" && (
+          <>
+            <div style={{ marginBottom: 14 }}>
+              <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Category</div>
+              <select value={editingMacros.category || guessCategory(ingredientMacroPopup.name)} onChange={e => setEditingMacros(p => ({ ...p, category: e.target.value }))} style={{ width: "100%" }}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICONS[c]} {c}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Brand <span style={{ color: "#444" }}>(optional)</span></div>
+              <input value={editingMacros.brand ?? ""} onChange={e => setEditingMacros(p => ({ ...p, brand: e.target.value }))} placeholder="e.g. Woolworths" style={{ width: "100%" }} />
+            </div>
+            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+              {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
+                <div key={key}>
+                  <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>{label}</div>
+                  <input type="number" min="0" value={editingMacros[key] ?? ""} onChange={e => setEditingMacros(p => ({ ...p, [key]: e.target.value }))}
+                    placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
+                </div>
+              ))}
+            </div>
+            <button className="btn" onClick={() => {
+              const name = ingredientMacroPopup.name;
+              const parsedMacros = {
+                cal: parseFloat(editingMacros.cal) || 0,
+                protein: parseFloat(editingMacros.protein) || 0,
+                carbs: parseFloat(editingMacros.carbs) || 0,
+                fat: parseFloat(editingMacros.fat) || 0,
+                fibre: parseFloat(editingMacros.fibre) || 0,
+                sugar: parseFloat(editingMacros.sugar) || 0,
+              };
+              const brand = editingMacros.brand?.trim() || "";
+              const category = editingMacros.category || guessCategory(name);
+              setStandaloneIngredients(prev => {
+                const list = Array.isArray(prev) ? prev : [];
+                const exists = list.find(i => i.name.toLowerCase() === name.toLowerCase());
+                if (exists) {
+                  return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, brand, category, macros: parsedMacros } : i);
+                } else {
+                  return [...list, { name, brand, category, store: "Woolworths", macros: parsedMacros }];
+                }
+              });
               setIngredientMacroPopup(null);
-            }
-          }} style={{ background: "#2a1a1a", color: "#f44336", border: "1px solid #f4433633", padding: "13px 20px" }}>
-            Delete
-          </button>
-        </div>
+            }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
+              Save
+            </button>
+          </>
+        )}
+
+        {/* ── Conversions tab ── */}
+        {ingredientPopupTab === "conversions" && (() => {
+          const name = ingredientMacroPopup.name;
+          const existing = (standaloneIngredients || []).find(i => i.name.toLowerCase() === name.toLowerCase());
+          const hardcoded = GRAMS_PER_UNIT[name.toLowerCase()];
+          const gramsPerWhole = existing?.gramsPerWhole || (hardcoded?.whole) || null;
+          const wholeUnit = existing?.wholeUnit || "g";
+          return (
+            <>
+              <div style={{ background: "#0c0c0a", borderRadius: 12, padding: "14px", marginBottom: 16, border: "1px solid #252320" }}>
+                <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Whole unit conversion</div>
+                {gramsPerWhole ? (
+                  <>
+                    <div className="dm" style={{ fontSize: 16, color: "#ede8d8", marginBottom: 6 }}>1 whole = <span style={{ color: "#c8a96e", fontWeight: 700 }}>{gramsPerWhole}{wholeUnit}</span></div>
+                    <div className="dm" style={{ fontSize: 13, color: "#555" }}>100g = {parseFloat((100 / gramsPerWhole).toFixed(2))} whole</div>
+                    <div className="dm" style={{ fontSize: 13, color: "#555" }}>1 whole = {gramsPerWhole}{wholeUnit}</div>
+                  </>
+                ) : (
+                  <div className="dm" style={{ fontSize: 13, color: "#444" }}>No conversion saved yet</div>
+                )}
+              </div>
+              <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Set conversion</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
+                <span className="dm" style={{ fontSize: 13, color: "#555", whiteSpace: "nowrap" }}>1 whole =</span>
+                <input type="number" min="0" id="conversionInput" defaultValue={gramsPerWhole || ""} placeholder="e.g. 200" style={{ flex: 1 }} />
+                <select id="conversionUnit" defaultValue={wholeUnit} style={{ width: 70 }}>
+                  <option value="g">g</option>
+                  <option value="ml">ml</option>
+                </select>
+              </div>
+              <button className="btn" onClick={() => {
+                const val = parseFloat(document.getElementById("conversionInput").value);
+                const unit = document.getElementById("conversionUnit").value;
+                if (!val) return;
+                setStandaloneIngredients(prev => {
+                  const list = Array.isArray(prev) ? prev : [];
+                  const exists = list.find(i => i.name.toLowerCase() === name.toLowerCase());
+                  if (exists) {
+                    return list.map(i => i.name.toLowerCase() === name.toLowerCase() ? { ...i, gramsPerWhole: val, wholeUnit: unit } : i);
+                  } else {
+                    return [...list, { name, store: "Woolworths", category: guessCategory(name), gramsPerWhole: val, wholeUnit: unit }];
+                  }
+                });
+                setIngredientMacroPopup(null);
+              }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
+                Save Conversion
+              </button>
+            </>
+          );
+        })()}
+
+        {/* ── Used In tab ── */}
+        {ingredientPopupTab === "recipes" && (() => {
+          const name = ingredientMacroPopup.name;
+          const usedIn = recipes.filter(r => r.ingredients.some(i => i.name.toLowerCase() === name.toLowerCase()) && !r.id?.toString().startsWith("snack-ing-"));
+          return (
+            <>
+              {usedIn.length === 0 ? (
+                <div className="dm" style={{ textAlign: "center", padding: 32, color: "#444", fontSize: 13 }}>Not used in any recipes</div>
+              ) : (
+                <div style={{ background: "#0c0c0a", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
+                  {usedIn.map((r, idx) => {
+                    const ing = r.ingredients.find(i => i.name.toLowerCase() === name.toLowerCase());
+                    return (
+                      <div key={r.id} onClick={() => { setViewingRecipe(r); setIngredientMacroPopup(null); }}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderBottom: idx < usedIn.length - 1 ? "1px solid #1a1814" : "none", cursor: "pointer" }}>
+                        <div>
+                          <div className="dm" style={{ fontSize: 13, fontWeight: 600, color: "#ede8d8" }}>{r.name}</div>
+                          <div className="dm" style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{ing?.qty} {ing?.unit}</div>
+                        </div>
+                        <span className="dm" style={{ fontSize: 11, color: "#c8a96e" }}>→</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   )}
