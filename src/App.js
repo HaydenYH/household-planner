@@ -851,7 +851,7 @@ return (
   )}
 
   {/* ── Header ── */}
-  <div style={{ padding: "22px 20px 14px", borderBottom: "1px solid #1a1814" }}>
+  <div style={{ padding: "22px 20px 14px", borderBottom: "1px solid #1a1814", position: "sticky", top: 0, zIndex: 100, background: "#0c0c0a" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
       <div>
         <div className="dm" style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#555", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}>
@@ -1127,7 +1127,8 @@ return (
   {/* ── Recipes View ── */}
 {view === "recipes" && (
   <div style={{ padding: "14px" }} className="fadeIn">
-    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+    <div style={{ position: "sticky", top: "var(--header-height, 110px)", zIndex: 90, background: "#0c0c0a", paddingBottom: 10, marginBottom: 4 }}>
+    <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
       <button className="btn" onClick={() => setRecipeTab("recipes")}
         style={{ flex: 1, padding: "10px", background: recipeTab === "recipes" ? "#c8a96e" : "#1e1c18", color: recipeTab === "recipes" ? "#0c0c0a" : "#888" }}>
         📖 Recipes
@@ -1139,10 +1140,11 @@ return (
     </div>
     {recipeTab === "recipes" && (
     <button className="btn" onClick={() => setShowAddRecipe(true)}
-      style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 14 }}>
+      style={{ background: "#c8a96e", color: "#0c0c0a", padding: "11px 20px", width: "100%", marginBottom: 4 }}>
       + New Recipe
     </button>
     )}
+    </div>
     {recipeTab === "ingredients" && (() => {
       const allIngredients = [];
       recipes.forEach(r => r.ingredients.forEach(i => {
@@ -1264,7 +1266,8 @@ return (
   {/* ── Shopping View ── */}
 {view === "shopping" && (
   <div style={{ padding: "14px" }} className="fadeIn">
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8 }}>
+    <div style={{ position: "sticky", top: "var(--header-height, 110px)", zIndex: 90, background: "#0c0c0a", paddingBottom: 10, marginBottom: 4 }}>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0, gap: 8 }}>
       <button className="btn" onClick={() => setShowAddShoppingItem(true)} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>+ Custom item</button>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <button className="btn" onClick={() => setCompactShopping(p => !p)}
@@ -1279,6 +1282,7 @@ return (
           </button>
         )}
       </div>
+    </div>
     </div>
 
     {shoppingWarnings.length > 0 && (
