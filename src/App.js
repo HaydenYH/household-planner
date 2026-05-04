@@ -1198,7 +1198,7 @@ return (
   setIngredientMacroPopup({ name: ing.name, ...macros });
   setEditingMacros({ cal: macros.cal ?? "", protein: macros.protein ?? "", carbs: macros.carbs ?? "", fat: macros.fat ?? "", fibre: macros.fibre ?? "", sugar: macros.sugar ?? "" });
 }}
-                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none", cursor: getMacros(ing.name) ? "pointer" : "default" }}>
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid #1a1814" : "none", cursor: "pointer" }}>
                       <span className="dm" style={{ fontSize: 13, fontWeight: 500, color: getMacros(ing.name, standaloneIngredients) ? "#ede8d8" : "#c87c3e" }}>{ing.name}</span>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         {getMacros(ing.name, standaloneIngredients) ? <span className="dm" style={{ fontSize: 10, color: "#c8a96e" }}>{getMacros(ing.name, standaloneIngredients).cal} cal</span> : <span className="dm" style={{ fontSize: 10, color: "#c87c3e" }}>No macros</span>}
