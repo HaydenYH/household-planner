@@ -439,44 +439,53 @@ return next;
 
 // ── useSharedState hook ───────────────────────────────────────────────────────
 function useSharedState(key, defaultValue, onRemoteChange) {
-const [state, setState] = useState(defaultValue);
-const [synced, setSynced] = useState(false);
-const localRef = useRef(false);
-const saveTimer = useRef(null);
+  const [state, setState] = useState(defaultValue);
+  const [synced, setSynced] = useState(false);
+  const localRef = useRef(false);
+  const saveTimer = useRef(null);
+  const lastSavedRef = useRef(null);
 
-useEffect(() => {
-setState(defaultValue);
-sb.get(key).then(val => {
-setState(val !== null ? val : defaultValue);
-setSynced(true);
-}).catch(() => setSynced(true));
-}, [key]);
+  useEffect(() => {
+    setSynced(false);
+    setState(defaultValue);
+    sb.get(key).then(val => {
+      if (val !== null) {
+        setState(val);
+        lastSavedRef.current = val;
+      } else {
+        lastSavedRef.current = null;
+      }
+      setSynced(true);
+    }).catch(() => setSynced(true));
+  }, [key]);
 
-useEffect(() => {
-const unsub = sb.subscribe(key, (val, meta) => {
-  if (!localRef.current) {
-    setState(val);
-    if (meta?.updatedBy) {
-      onRemoteChange?.(key, meta.updatedBy);
-    }
-  }
-});
-return unsub;
-}, [key]);
+  useEffect(() => {
+    const unsub = sb.subscribe(key, (val, meta) => {
+      if (!localRef.current) {
+        setState(val);
+        lastSavedRef.current = val;
+        if (meta?.updatedBy) {
+          onRemoteChange?.(key, meta.updatedBy);
+        }
+      }
+    });
+    return unsub;
+  }, [key]);
 
-const setAndSave = useCallback((updater) => {
-  setState(prev => {
-    const next = typeof updater === "function" ? updater(prev) : updater;
-    localRef.current = true;
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      sb.set(key, next, _currentUser).finally(() => { localRef.current = false; });
-    }, 400);
-    return next;
-  });
-}, [key]);
+  const setAndSave = useCallback((updater) => {
+    setState(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      localRef.current = true;
+      clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        sb.set(key, next, _currentUser).finally(() => { localRef.current = false; });
+        lastSavedRef.current = next;
+      }, 400);
+      return next;
+    });
+  }, [key]);
 
-return [state, setAndSave, synced];
+  return [state, setAndSave, synced];
 }
 
 // ── Ingredient editor (shared by add + edit modals) ───────────────────────────
