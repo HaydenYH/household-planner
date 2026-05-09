@@ -755,7 +755,17 @@ const [sidesPickerFor, setSidesPickerFor] = useState(null);
 const [sidesSearch, setSidesSearch] = useState("");
 const [showMissingMacrosOnly, setShowMissingMacrosOnly] = useState(false);
 const [ingredientPopupTab, setIngredientPopupTab] = useState("macros");
-const [ingredientSearch, setIngredientSearch] = useState("");
+const [keyboardHeight, setKeyboardHeight] = useState(0);
+useEffect(() => {
+  const handler = () => {
+    if (window.visualViewport) {
+      const kbHeight = window.innerHeight - window.visualViewport.height;
+      setKeyboardHeight(kbHeight > 50 ? kbHeight : 0);
+    }
+  };
+  window.visualViewport?.addEventListener("resize", handler);
+  return () => window.visualViewport?.removeEventListener("resize", handler);
+}, []);
 
 useEffect(() => {
   const handleScroll = () => setShowBackToTop(window.scrollY > 200);
@@ -2520,7 +2530,7 @@ return (
 {/* ── Snack Picker Modal ── */}
   {snackPickerFor && (
     <div className="overlay" onClick={() => setSnackPickerFor(null)} style={{ alignItems: "flex-end" }}>
-      <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "60vh", overflowY: "auto", paddingBottom: 24, position: "relative" }}>
+      <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: keyboardHeight > 0 ? `calc(100vh - ${keyboardHeight}px - 40px)` : "60vh", overflowY: "auto", paddingBottom: 24, position: "relative", transition: "max-height 0.2s ease" }}>
         <div style={{ position: "sticky", top: 0, background: "#161512", paddingBottom: 12, zIndex: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>🍎 {snackPickerFor.member}'s Snack</h2>
