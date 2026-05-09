@@ -419,11 +419,12 @@ function buildEmptyWeek() {
   return w;
 }
 
-function getWeekStart() {
+function getWeekStart(offsetWeeks = 0) {
 const now = new Date();
 const diff = now.getDay() === 0 ? -6 : 1 - now.getDay();
 const mon = new Date(now);
-mon.setDate(now.getDate() + diff);
+mon.setDate(now.getDate() + diff + (offsetWeeks * 7));
+mon.setHours(0, 0, 0, 0);
 return mon;
 }
 
