@@ -2529,8 +2529,8 @@ return (
 
 {/* ── Snack Picker Modal ── */}
   {snackPickerFor && (
-    <div className="overlay" onClick={() => setSnackPickerFor(null)} style={{ alignItems: "flex-end" }}>
-      <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: keyboardHeight > 0 ? `calc(100vh - ${keyboardHeight}px - 40px)` : "60vh", overflowY: "auto", paddingBottom: 24, position: "relative", transition: "max-height 0.2s ease" }}>
+    <div className="overlay" onClick={() => setSnackPickerFor(null)} style={{ alignItems: "flex-start", paddingTop: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#161512", borderRadius: "0 0 24px 24px", width: "100%", maxWidth: 480, maxHeight: "80vh", overflowY: "auto", padding: 24, paddingBottom: 40, borderBottom: "1px solid #252320", borderLeft: "1px solid #252320", borderRight: "1px solid #252320" }}>
         <div style={{ position: "sticky", top: 0, background: "#161512", paddingBottom: 12, zIndex: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>🍎 {snackPickerFor.member}'s Snack</h2>
