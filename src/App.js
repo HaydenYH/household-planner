@@ -793,6 +793,7 @@ const [sidesPickerFor, setSidesPickerFor] = useState(null);
 const [sidesSearch, setSidesSearch] = useState("");
 const [showMissingMacrosOnly, setShowMissingMacrosOnly] = useState(false);
 const [ingredientPopupTab, setIngredientPopupTab] = useState("macros");
+const [ingredientSearch, setIngredientSearch] = useState("");
 const [keyboardHeight, setKeyboardHeight] = useState(0);
 useEffect(() => {
   const handler = () => {
@@ -1061,8 +1062,7 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes, curren
 }
 
 function generateShoppingList(switchView = true) {
-  consolidated[key].category = ing.category || guessCategory(ing.name);
-        consolidated[key].quantities.push({ qty: ing.qty * scale, unit: ing.unit || "" });
+  const list = buildShoppingListFromWeek(week, recipes, standaloneIngredients);
   setShoppingList(prev => mergeGeneratedShoppingList(list, prev));
   if (switchView) setView("shopping");
 }
