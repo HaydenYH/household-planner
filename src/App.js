@@ -829,14 +829,15 @@ const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
 const recipesRef = useRef(recipes);
 useEffect(() => { recipesRef.current = recipes; }, [recipes]);
 
-const shoppingWeekStart = useMemo(() => addDays(weekStart, shoppingWeekOffset * 7), [weekStart, shoppingWeekOffset]);
-const [shoppingWeekData, , shoppingWeekReady] = useSharedState(getWeekKey(shoppingWeekStart), defaultWeek, handleRemoteChange);
+const nextWeekStart = useMemo(() => addDays(weekStart, 7), [weekStart]);
+const [nextWeekData, , nextWeekReady] = useSharedState(getWeekKey(nextWeekStart), defaultWeek, handleRemoteChange);
 
 useEffect(() => {
-  if (!loaded || !shoppingWeekReady) return;
-  const generated = buildShoppingListFromWeek(shoppingWeekData, recipesRef.current, standaloneIngredients);
+  if (!loaded) return;
+  const activeWeekData = shoppingWeekOffset === 1 ? nextWeekData : week;
+  const generated = buildShoppingListFromWeek(activeWeekData, recipesRef.current, standaloneIngredients);
   setShoppingList(prev => mergeGeneratedShoppingList(generated, prev));
-}, [loaded, shoppingWeekData, shoppingWeekOffset]);
+}, [loaded, week, nextWeekData, shoppingWeekOffset]);
 
 function mergeGeneratedShoppingList(generated, existing = []) {
   const existingById = new Map((Array.isArray(existing) ? existing : []).map(item => [item.id, item]));
