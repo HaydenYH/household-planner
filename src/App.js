@@ -1507,14 +1507,14 @@ return (
       })()}
 
       {/* ── Day Notes (per person) ── */}
-      {activeUser && (() => {
+      {activeUserName && (() => {
         const day = DAYS[selectedDay];
-        const notes = week[day]?.[`notes_${activeUser}`] || [];
-        const color = MEMBER_COLORS[activeUser];
+        const notes = week[day]?.[`notes_${activeUserName}`] || [];
+        const color = MEMBER_COLORS[activeUserName];
         return (
           <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: color + "33" }}>
             <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 10 }}>
-              📝 {activeUser}'s Notes
+              📝 {activeUserName}'s Notes
             </div>
             {notes.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
@@ -1524,7 +1524,7 @@ return (
                     <button onClick={() => {
                       setWeek(prev => ({
                         ...prev,
-                        [day]: { ...prev[day], [`notes_${activeUser}`]: prev[day][`notes_${activeUser}`].filter((_, i) => i !== idx) }
+                        [day]: { ...prev[day], [`notes_${activeUserName}`]: (prev[day][`notes_${activeUserName}`] || []).filter((_, i) => i !== idx) }
                       }));
                     }} style={{ background: "none", border: "none", color: "#444", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
                   </div>
@@ -1541,7 +1541,7 @@ return (
                     const val = e.target.value.trim();
                     setWeek(prev => ({
                       ...prev,
-                      [day]: { ...prev[day], [`notes_${activeUser}`]: [...(prev[day][`notes_${activeUser}`] || []), val] }
+                      [day]: { ...prev[day], [`notes_${activeUserName}`]: [...(prev[day][`notes_${activeUserName}`] || []), val] }
                     }));
                     e.target.value = "";
                   }
@@ -1553,7 +1553,7 @@ return (
                   const val = input.value.trim();
                   setWeek(prev => ({
                     ...prev,
-                    [day]: { ...prev[day], [`notes_${activeUser}`]: [...(prev[day][`notes_${activeUser}`] || []), val] }
+                    [day]: { ...prev[day], [`notes_${activeUserName}`]: [...(prev[day][`notes_${activeUserName}`] || []), val] }
                   }));
                   input.value = "";
                 }
