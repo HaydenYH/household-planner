@@ -725,7 +725,7 @@ const [recipes, setRecipes, recipesReady] = useSharedState("recipes", DEFAULT_RE
 const [week, setWeek, weekReady] = useSharedState(getWeekKey(weekStart), defaultWeek, handleRemoteChange);
 const [shoppingList, setShoppingList, shopReady] = useSharedState("shopping", [], handleRemoteChange);
 const [goals, setGoals, goalsReady] = useSharedState("goals", buildEmptyGoals(), handleRemoteChange);
-const [standaloneIngredients, setStandaloneIngredients] = useSharedState("ingredients", [], handleRemoteChange);
+const [weightData, setWeightData] = useSharedState(`weight-${activeUserName}`, { stats: { height: "", activeness: "sedentary", goalWeight: "" }, weighins: {}, tdeeOverride: null }, handleRemoteChange);
 const [checkedMeat, setCheckedMeat] = useSharedState("shopping-checked-Meat", {}, handleRemoteChange);
 const [checkedBreadDairy, setCheckedBreadDairy] = useSharedState("shopping-checked-BreadDairy", {}, handleRemoteChange);
 const [checkedPasta, setCheckedPasta] = useSharedState("shopping-checked-Pasta", {}, handleRemoteChange);
@@ -772,6 +772,9 @@ const [shoppingListSnapshot, setShoppingListSnapshot] = useState(null);
 const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
 const [newGoalFrequency, setNewGoalFrequency] = useState(3);
+const [goalsTab, setGoalsTab] = useState("goals");
+const [weightSection, setWeightSection] = useState("stats");
+const [weightViewMode, setWeightViewMode] = useState("graph");
 const [newGoalMember, setNewGoalMember] = useState(null);
 const [showAddIngredient, setShowAddIngredient] = useState(false);
 const [newIngredient, setNewIngredient] = useState({ name: "", brand: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } });
@@ -1995,16 +1998,27 @@ return (
   {/* ── Goals View ── */}
   {view === "goals" && (
     <div style={{ padding: "14px" }} className="fadeIn">
-      {MEMBERS.map(member => {
+      {/* Toggle */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <button className="btn" onClick={() => setGoalsTab("goals")}
+          style={{ flex: 1, padding: "10px", background: goalsTab === "goals" ? "#c8a96e" : "#1e1c18", color: goalsTab === "goals" ? "#0c0c0a" : "#888" }}>
+          🎯 Weekly Goals
+        </button>
+        <button className="btn" onClick={() => setGoalsTab("weight")}
+          style={{ flex: 1, padding: "10px", background: goalsTab === "weight" ? "#c8a96e" : "#1e1c18", color: goalsTab === "weight" ? "#0c0c0a" : "#888" }}>
+          ⚖️ Weight
+        </button>
+      </div>
+
+      {/* ── Weekly Goals ── */}
+      {goalsTab === "goals" && MEMBERS.map(member => {
         const memberGoals = goals[member] || [];
         const color = MEMBER_COLORS[member];
         const totalChecks = memberGoals.reduce((acc, g) => acc + Object.values(g.checks).filter(Boolean).length, 0);
         const maxChecks = memberGoals.reduce((acc, g) => acc + (g.frequency || 7), 0);
         const pct = maxChecks > 0 ? Math.round((totalChecks / maxChecks) * 100) : 0;
-
         return (
           <div key={member} style={{ marginBottom: 20 }}>
-            {/* Member header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div className="dm" style={{ width: 32, height: 32, borderRadius: "50%", background: color + "22", border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, color }}>
@@ -2022,14 +2036,11 @@ return (
                 )}
               </div>
             </div>
-
-            {/* Progress bar */}
             {maxChecks > 0 && (
               <div style={{ height: 3, background: "#1e1c18", borderRadius: 100, marginBottom: 10, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 100, transition: "width .3s" }} />
               </div>
             )}
-
             {memberGoals.length === 0 ? (
               <div className="dm" style={{ fontSize: 12, color: "#444", padding: "12px 0" }}>No goals set yet</div>
             ) : (
@@ -2046,7 +2057,6 @@ return (
                         <button onClick={() => deleteGoal(member, goal.id)}
                           style={{ background: "none", border: "none", color: "#444", fontSize: 16, cursor: "pointer", padding: "0 0 0 8px", lineHeight: 1, flexShrink: 0 }}>×</button>
                       </div>
-                      {/* Day tick buttons */}
                       <div style={{ display: "flex", gap: 5 }}>
                         {DAYS.map(day => {
                           const done = goal.checks[day];
@@ -2068,6 +2078,321 @@ return (
           </div>
         );
       })}
+
+      {/* ── Weight Section ── */}
+      {goalsTab === "weight" && (() => {
+        const color = MEMBER_COLORS[activeUserName] || "#c8a96e";
+        const stats = weightData?.stats || {};
+        const weighins = weightData?.weighins || {};
+        const tdeeOverride = weightData?.tdeeOverride || null;
+
+        const ACTIVENESS = [
+          { key: "sedentary", label: "Sedentary", desc: "Little or no exercise", multiplier: 1.2 },
+          { key: "light", label: "Lightly Active", desc: "1-3 days/week", multiplier: 1.375 },
+          { key: "moderate", label: "Moderately Active", desc: "3-5 days/week", multiplier: 1.55 },
+          { key: "active", label: "Very Active", desc: "6-7 days/week", multiplier: 1.725 },
+          { key: "extra", label: "Extra Active", desc: "Athlete / physical job", multiplier: 1.9 },
+        ];
+
+        // Get latest weight from weighins
+        const weighinDates = Object.keys(weighins).sort();
+        const latestWeight = weighinDates.length > 0 ? weighins[weighinDates[weighinDates.length - 1]] : null;
+
+        // Calculate BMR (Mifflin-St Jeor — needs gender, use a neutral estimate)
+        const heightCm = parseFloat(stats.height) || 0;
+        const weightKg = parseFloat(latestWeight) || 0;
+        const activeness = ACTIVENESS.find(a => a.key === stats.activeness) || ACTIVENESS[0];
+        const bmr = weightKg > 0 && heightCm > 0 ? Math.round(10 * weightKg + 6.25 * heightCm - 5 * 25 + 5) : null;
+        const tdee = tdeeOverride || (bmr ? Math.round(bmr * activeness.multiplier) : null);
+
+        const goalWeight = parseFloat(stats.goalWeight) || null;
+
+        // Trendline calculation
+        const weighinEntries = weighinDates.map((d, i) => ({ x: i, y: parseFloat(weighins[d]) })).filter(e => !isNaN(e.y));
+        let trendSlope = 0, trendIntercept = 0;
+        if (weighinEntries.length >= 2) {
+          const n = weighinEntries.length;
+          const sumX = weighinEntries.reduce((a, e) => a + e.x, 0);
+          const sumY = weighinEntries.reduce((a, e) => a + e.y, 0);
+          const sumXY = weighinEntries.reduce((a, e) => a + e.x * e.y, 0);
+          const sumX2 = weighinEntries.reduce((a, e) => a + e.x * e.x, 0);
+          trendSlope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+          trendIntercept = (sumY - trendSlope * sumX) / n;
+        }
+
+        const todayKey = new Date().toISOString().slice(0, 10);
+
+        return (
+          <div>
+            {/* Person indicator */}
+            <div style={{ background: color + "22", border: `1px solid ${color}44`, borderRadius: 12, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="dm" style={{ width: 28, height: 28, borderRadius: "50%", background: color + "33", border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, color }}>
+                {MEMBER_INITIALS[activeUserName]}
+              </div>
+              <span className="dm" style={{ fontSize: 13, color, fontWeight: 600 }}>{activeUserName}'s Weight Data</span>
+            </div>
+
+            {/* Section selector */}
+            <select value={weightSection} onChange={e => setWeightSection(e.target.value)}
+              style={{ width: "100%", marginBottom: 16, fontSize: 14, padding: "11px 14px" }}>
+              <option value="stats">📋 Current Stats</option>
+              <option value="weighin">⚖️ Weigh In</option>
+              <option value="tdee">🔥 TDEE Update</option>
+              <option value="progress">📈 Progress</option>
+            </select>
+
+            {/* ── Current Stats ── */}
+            {weightSection === "stats" && (
+              <div>
+                <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+                  <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Your Details</div>
+                  <div style={{ marginBottom: 12 }}>
+                    <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>Height (cm)</div>
+                    <input type="number" value={stats.height || ""} onChange={e => setWeightData(p => ({ ...p, stats: { ...p.stats, height: e.target.value } }))}
+                      placeholder="e.g. 178" style={{ width: "100%" }} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>Goal Weight (kg)</div>
+                    <input type="number" value={stats.goalWeight || ""} onChange={e => setWeightData(p => ({ ...p, stats: { ...p.stats, goalWeight: e.target.value } }))}
+                      placeholder="e.g. 80" style={{ width: "100%" }} />
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 8 }}>Activity Level</div>
+                    {ACTIVENESS.map(a => (
+                      <div key={a.key} onClick={() => setWeightData(p => ({ ...p, stats: { ...p.stats, activeness: a.key } }))}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, marginBottom: 6, background: stats.activeness === a.key ? color + "1a" : "#0c0c0a", border: `1.5px solid ${stats.activeness === a.key ? color : "#252320"}`, cursor: "pointer" }}>
+                        <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${stats.activeness === a.key ? color : "#555"}`, background: stats.activeness === a.key ? color : "transparent", flexShrink: 0 }} />
+                        <div>
+                          <div className="dm" style={{ fontSize: 13, fontWeight: 600, color: stats.activeness === a.key ? color : "#ede8d8" }}>{a.label}</div>
+                          <div className="dm" style={{ fontSize: 11, color: "#555" }}>{a.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {tdee && (
+                  <div className="card" style={{ padding: 16, marginBottom: 12, borderColor: color + "44" }}>
+                    <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 12 }}>Your Estimated TDEE</div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 36, fontWeight: 700, color, fontFamily: "DM Sans, sans-serif" }}>{tdee}</span>
+                      <span className="dm" style={{ fontSize: 13, color: "#555" }}>cal/day</span>
+                    </div>
+                    <div className="dm" style={{ fontSize: 12, color: "#555" }}>Based on {latestWeight}kg, {heightCm}cm, {activeness.label.toLowerCase()}</div>
+                  </div>
+                )}
+                {tdee && (
+                  <div className="card" style={{ padding: 16 }}>
+                    <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 12 }}>🔢 Sensitivity Table</div>
+                    <div style={{ background: "#0c0c0a", borderRadius: 10, overflow: "hidden", border: "1px solid #252320" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", background: "#1a1814", padding: "8px 10px" }}>
+                        {["Calories", "Deficit", "kg/wk", "→ 5kg", "→ 10kg"].map(h => (
+                          <div key={h} className="dm" style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: ".08em" }}>{h}</div>
+                        ))}
+                      </div>
+                      {[100, 250, 500, 750].map(deficit => {
+                        const cals = tdee - deficit;
+                        const kgPerWeek = parseFloat(((deficit * 7) / 7700).toFixed(2));
+                        const weeks5 = Math.round(5 / kgPerWeek);
+                        const weeks10 = Math.round(10 / kgPerWeek);
+                        return (
+                          <div key={deficit} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", padding: "10px 10px", borderTop: "1px solid #1a1814" }}>
+                            <div className="dm" style={{ fontSize: 13, fontWeight: 700, color }}>{cals}</div>
+                            <div className="dm" style={{ fontSize: 12, color: "#888" }}>-{deficit}</div>
+                            <div className="dm" style={{ fontSize: 12, color: "#5c9fe0" }}>{kgPerWeek}</div>
+                            <div className="dm" style={{ fontSize: 12, color: "#888" }}>{weeks5}wk</div>
+                            <div className="dm" style={{ fontSize: 12, color: "#888" }}>{weeks10}wk</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Weigh In ── */}
+            {weightSection === "weighin" && (
+              <div>
+                <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+                  <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 12 }}>Today's Weigh In</div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input type="number" step="0.1" defaultValue={weighins[todayKey] || ""}
+                      id="weighinInput" placeholder="e.g. 84.5" style={{ flex: 1 }} />
+                    <span className="dm" style={{ fontSize: 13, color: "#555" }}>kg</span>
+                    <button className="btn" onClick={() => {
+                      const val = parseFloat(document.getElementById("weighinInput").value);
+                      if (!val) return;
+                      setWeightData(p => ({ ...p, weighins: { ...p.weighins, [todayKey]: val } }));
+                    }} style={{ background: color, color: "#0c0c0a", padding: "10px 16px" }}>Save</button>
+                  </div>
+                  {weighins[todayKey] && (
+                    <div className="dm" style={{ fontSize: 12, color: "#4caf50", marginTop: 8 }}>✓ Today logged: {weighins[todayKey]}kg</div>
+                  )}
+                </div>
+                {latestWeight && (
+                  <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+                    <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 12 }}>Recent Weigh Ins</div>
+                    {[...weighinDates].reverse().slice(0, 7).map(date => (
+                      <div key={date} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1a1814" }}>
+                        <span className="dm" style={{ fontSize: 12, color: "#888" }}>{new Date(date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span className="dm" style={{ fontSize: 14, fontWeight: 700, color }}>{weighins[date]}kg</span>
+                          <button onClick={() => setWeightData(p => {
+                            const w = { ...p.weighins };
+                            delete w[date];
+                            return { ...p, weighins: w };
+                          })} style={{ background: "none", border: "none", color: "#444", fontSize: 14, cursor: "pointer" }}>×</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── TDEE Update ── */}
+            {weightSection === "tdee" && (
+              <div className="card" style={{ padding: 16 }}>
+                <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Manual TDEE Override</div>
+                <div className="dm" style={{ fontSize: 12, color: "#555", marginBottom: 14 }}>Use this if you've had your TDEE professionally measured or prefer a custom value. Leave blank to use the calculated estimate.</div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+                  <input type="number" id="tdeeInput" defaultValue={tdeeOverride || ""} placeholder={`Calculated: ${tdee || "—"}`} style={{ flex: 1 }} />
+                  <span className="dm" style={{ fontSize: 13, color: "#555" }}>cal</span>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn" onClick={() => {
+                    const val = parseFloat(document.getElementById("tdeeInput").value);
+                    if (!val) return;
+                    setWeightData(p => ({ ...p, tdeeOverride: val }));
+                  }} style={{ flex: 1, background: color, color: "#0c0c0a", padding: "11px" }}>Save Override</button>
+                  {tdeeOverride && (
+                    <button className="btn" onClick={() => setWeightData(p => ({ ...p, tdeeOverride: null }))}
+                      style={{ background: "#1e1c18", color: "#888", padding: "11px 16px" }}>Clear</button>
+                  )}
+                </div>
+                {tdeeOverride && (
+                  <div className="dm" style={{ fontSize: 12, color: "#4caf50", marginTop: 8 }}>✓ Using manual TDEE: {tdeeOverride} cal</div>
+                )}
+              </div>
+            )}
+
+            {/* ── Progress ── */}
+            {weightSection === "progress" && (
+              <div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <button className="btn" onClick={() => setWeightViewMode("graph")}
+                    style={{ flex: 1, padding: "9px", background: weightViewMode === "graph" ? color : "#1e1c18", color: weightViewMode === "graph" ? "#0c0c0a" : "#888" }}>
+                    📈 Graph
+                  </button>
+                  <button className="btn" onClick={() => setWeightViewMode("table")}
+                    style={{ flex: 1, padding: "9px", background: weightViewMode === "table" ? color : "#1e1c18", color: weightViewMode === "table" ? "#0c0c0a" : "#888" }}>
+                    📋 Table
+                  </button>
+                </div>
+
+                {weighinEntries.length < 2 ? (
+                  <div className="dm" style={{ textAlign: "center", padding: 32, color: "#444", fontSize: 13 }}>Log at least 2 weigh-ins to see your progress</div>
+                ) : weightViewMode === "graph" ? (() => {
+                  const W = 340, H = 200, PAD = 36;
+                  const ys = weighinEntries.map(e => e.y);
+                  if (goalWeight) ys.push(goalWeight);
+                  const minY = Math.min(...ys) - 1;
+                  const maxY = Math.max(...ys) + 1;
+                  const toX = i => PAD + (i / (weighinEntries.length - 1)) * (W - PAD * 2);
+                  const toY = v => H - PAD - ((v - minY) / (maxY - minY)) * (H - PAD * 2);
+                  const actualPath = weighinEntries.map((e, i) => `${i === 0 ? "M" : "L"}${toX(i)},${toY(e.y)}`).join(" ");
+                  const trendPath = weighinEntries.length >= 2
+                    ? `M${toX(0)},${toY(trendIntercept)} L${toX(weighinEntries.length - 1)},${toY(trendSlope * (weighinEntries.length - 1) + trendIntercept)}`
+                    : null;
+                  const goalY = goalWeight ? toY(goalWeight) : null;
+                  return (
+                    <div className="card" style={{ padding: 16 }}>
+                      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+                        {/* Grid lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map(t => {
+                          const yVal = minY + t * (maxY - minY);
+                          const yPos = toY(yVal);
+                          return (
+                            <g key={t}>
+                              <line x1={PAD} y1={yPos} x2={W - PAD} y2={yPos} stroke="#1e1c18" strokeWidth="1" />
+                              <text x={PAD - 4} y={yPos + 4} fill="#555" fontSize="9" textAnchor="end" fontFamily="DM Sans">{yVal.toFixed(1)}</text>
+                            </g>
+                          );
+                        })}
+                        {/* Goal weight line */}
+                        {goalY !== null && (
+                          <>
+                            <line x1={PAD} y1={goalY} x2={W - PAD} y2={goalY} stroke={color} strokeWidth="1.5" strokeDasharray="4,4" opacity="0.6" />
+                            <text x={W - PAD + 4} y={goalY + 4} fill={color} fontSize="9" fontFamily="DM Sans">Goal</text>
+                          </>
+                        )}
+                        {/* Trend line */}
+                        {trendPath && <path d={trendPath} stroke="#a78bca" strokeWidth="1.5" fill="none" strokeDasharray="3,3" opacity="0.8" />}
+                        {/* Actual line */}
+                        <path d={actualPath} stroke={color} strokeWidth="2" fill="none" />
+                        {/* Dots */}
+                        {weighinEntries.map((e, i) => (
+                          <circle key={i} cx={toX(i)} cy={toY(e.y)} r="3" fill={color} />
+                        ))}
+                        {/* X axis labels */}
+                        {weighinEntries.map((e, i) => {
+                          if (i % Math.ceil(weighinEntries.length / 5) !== 0 && i !== weighinEntries.length - 1) return null;
+                          const date = weighinDates[i];
+                          return (
+                            <text key={i} x={toX(i)} y={H - 4} fill="#555" fontSize="8" textAnchor="middle" fontFamily="DM Sans">
+                              {new Date(date).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                            </text>
+                          );
+                        })}
+                      </svg>
+                      <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <div style={{ width: 16, height: 2, background: color, borderRadius: 1 }} />
+                          <span className="dm" style={{ fontSize: 10, color: "#555" }}>Actual</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <div style={{ width: 16, height: 2, background: "#a78bca", borderRadius: 1 }} />
+                          <span className="dm" style={{ fontSize: 10, color: "#555" }}>Trend</span>
+                        </div>
+                        {goalWeight && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <div style={{ width: 16, height: 2, background: color, borderRadius: 1, opacity: 0.5 }} />
+                            <span className="dm" style={{ fontSize: 10, color: "#555" }}>Goal</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })() : (
+                  <div className="card" style={{ padding: 16 }}>
+                    <div style={{ background: "#0c0c0a", borderRadius: 10, overflow: "hidden", border: "1px solid #252320" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", background: "#1a1814", padding: "8px 12px" }}>
+                        {["Date", "Weight", "Change"].map(h => (
+                          <div key={h} className="dm" style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: ".08em" }}>{h}</div>
+                        ))}
+                      </div>
+                      {[...weighinDates].reverse().map((date, idx, arr) => {
+                        const prev = arr[idx + 1] ? weighins[arr[idx + 1]] : null;
+                        const curr = weighins[date];
+                        const change = prev ? parseFloat((curr - prev).toFixed(1)) : null;
+                        return (
+                          <div key={date} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "10px 12px", borderTop: "1px solid #1a1814" }}>
+                            <div className="dm" style={{ fontSize: 12, color: "#888" }}>{new Date(date).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</div>
+                            <div className="dm" style={{ fontSize: 13, fontWeight: 700, color }}>{curr}kg</div>
+                            <div className="dm" style={{ fontSize: 12, color: change === null ? "#555" : change < 0 ? "#4caf50" : change > 0 ? "#f44336" : "#555" }}>
+                              {change === null ? "—" : change > 0 ? `+${change}` : change}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   )}
 
