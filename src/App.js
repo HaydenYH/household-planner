@@ -100,8 +100,8 @@ const MEMBERS = ["Hayden", "Eilish", "Tyran"];
 const MEMBER_INITIALS = { Hayden: "H", Eilish: "E", Tyran: "T" };
 const MEMBER_COLORS = { Hayden: "#c8a96e", Eilish: "#a78bca", Tyran: "#5c9fe0" };
 const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner"];
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const FULL_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const FULL_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const STORES = ["Woolworths", "Aldi", "Costco", "Market"];
 const MAX_GOALS = 5;
 
@@ -421,11 +421,11 @@ function buildEmptyWeek() {
 
 function getWeekStart(offsetWeeks = 0) {
 const now = new Date();
-const diff = now.getDay() === 0 ? -6 : 1 - now.getDay();
-const mon = new Date(now);
-mon.setDate(now.getDate() + diff + (offsetWeeks * 7));
-mon.setHours(0, 0, 0, 0);
-return mon;
+const diff = -now.getDay();
+const sun = new Date(now);
+sun.setDate(now.getDate() + diff + (offsetWeeks * 7));
+sun.setHours(0, 0, 0, 0);
+return sun;
 }
 
 function getWeekKey(startDate) {
@@ -707,13 +707,13 @@ function handleRemoteChange(key, who) {
 const [view, setView] = useState("week");
 const [selectedDay, setSelectedDay] = useState(() => {
   const today = new Date();
-  const diff = today.getDay() === 0 ? -6 : 1 - today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
+  const diff = -today.getDay();
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() + diff);
+  sunday.setHours(0, 0, 0, 0);
   const dayIndex = DAYS.findIndex((_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
     return d.toDateString() === today.toDateString();
   });
   return dayIndex >= 0 ? dayIndex : 0;
