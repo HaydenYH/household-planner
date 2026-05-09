@@ -449,6 +449,7 @@ function useSharedState(key, defaultValue, onRemoteChange) {
     setSynced(false);
     setState(defaultValue);
     sb.get(key).then(val => {
+      console.log("Supabase fetch for key:", key, "got:", val);
       if (val !== null) {
         setState(val);
         lastSavedRef.current = val;
@@ -456,7 +457,7 @@ function useSharedState(key, defaultValue, onRemoteChange) {
         lastSavedRef.current = null;
       }
       setSynced(true);
-    }).catch(() => setSynced(true));
+    }).catch((err) => { console.error("Supabase fetch error:", err); setSynced(true); });
   }, [key]);
 
   useEffect(() => {
