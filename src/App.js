@@ -770,6 +770,7 @@ const [showAddShoppingItem, setShowAddShoppingItem] = useState(false);
 const [newShoppingItem, setNewShoppingItem] = useState({ name: "", qty: "", unit: "", store: "Woolworths" });
 const [shoppingWeekOffset, setShoppingWeekOffset] = useState(0);
 const [shoppingListSnapshot, setShoppingListSnapshot] = useState(null);
+const [compactShopping, setCompactShopping] = useState(false);
 const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
 const [newGoalFrequency, setNewGoalFrequency] = useState(3);
