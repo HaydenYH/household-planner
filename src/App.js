@@ -771,6 +771,7 @@ const [compactShopping, setCompactShopping] = useState(false);
 const [shoppingListSnapshot, setShoppingListSnapshot] = useState(null);
 const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
+const [newGoalFrequency, setNewGoalFrequency] = useState(3);
 const [newGoalMember, setNewGoalMember] = useState(null);
 const [showAddIngredient, setShowAddIngredient] = useState(false);
 const [newIngredient, setNewIngredient] = useState({ name: "", brand: "", store: "Woolworths", category: "Other", macros: { cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" } });
@@ -1099,8 +1100,9 @@ const memberGoals = goals[member] || [];
 if (memberGoals.length >= MAX_GOALS) return;
 const checks = {};
 DAYS.forEach(d => { checks[d] = false; });
-setGoals(prev => ({ ...prev, [member]: [...(prev[member] || []), { id: Date.now(), text: newGoalText.trim(), checks }] }));
+setGoals(prev => ({ ...prev, [member]: [...(prev[member] || []), { id: Date.now(), text: newGoalText.trim(), checks, frequency: newGoalFrequency }] }));
 setNewGoalText("");
+setNewGoalFrequency(3);
 setNewGoalMember(null);
 }
 
@@ -1997,7 +1999,7 @@ return (
         const memberGoals = goals[member] || [];
         const color = MEMBER_COLORS[member];
         const totalChecks = memberGoals.reduce((acc, g) => acc + Object.values(g.checks).filter(Boolean).length, 0);
-        const maxChecks = memberGoals.length * 7;
+        const maxChecks = memberGoals.reduce((acc, g) => acc + (g.frequency || 7), 0);
         const pct = maxChecks > 0 ? Math.round((totalChecks / maxChecks) * 100) : 0;
 
         return (
@@ -2039,7 +2041,7 @@ return (
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
                           <span className="dm" style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{goal.text}</span>
-                          <span className="dm" style={{ fontSize: 10, color: "#555", flexShrink: 0 }}>{doneCount}/7</span>
+                          <span className="dm" style={{ fontSize: 10, color: "#555", flexShrink: 0 }}>{doneCount}/{goal.frequency || 7}</span>
                         </div>
                         <button onClick={() => deleteGoal(member, goal.id)}
                           style={{ background: "none", border: "none", color: "#444", fontSize: 16, cursor: "pointer", padding: "0 0 0 8px", lineHeight: 1, flexShrink: 0 }}>×</button>
@@ -2864,6 +2866,18 @@ return (
           style={{ width: "100%", marginBottom: 14 }}
           autoFocus
         />
+        <div style={{ marginBottom: 14 }}>
+          <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Target frequency</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[1,2,3,4,5,6,7].map(n => (
+              <button key={n} className="btn" onClick={() => setNewGoalFrequency(n)}
+                style={{ flex: 1, padding: "8px 4px", background: newGoalFrequency === n ? MEMBER_COLORS[newGoalMember] : "#1e1c18", color: newGoalFrequency === n ? "#0c0c0a" : "#555" }}>
+                {n}
+              </button>
+            ))}
+          </div>
+          <div className="dm" style={{ fontSize: 11, color: "#555", marginTop: 6 }}>{newGoalFrequency}x per week</div>
+        </div>
         <button className="btn" onClick={() => addGoal(newGoalMember)}
           style={{ background: MEMBER_COLORS[newGoalMember], color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
           Add Goal
