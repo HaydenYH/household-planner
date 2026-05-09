@@ -2520,7 +2520,7 @@ return (
 {/* ── Snack Picker Modal ── */}
   {snackPickerFor && (
     <div className="overlay" onClick={() => setSnackPickerFor(null)}>
-      <div className="sheet" onClick={e => e.stopPropagation()}>
+      <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "85vh", overflowY: "auto", paddingBottom: 120 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: 18 }}>🍎 {snackPickerFor.member}'s Snack</h2>
           <button onClick={() => { setSnackPickerFor(null); setSelectedSnackIng(null); }} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
