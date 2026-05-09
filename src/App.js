@@ -768,7 +768,7 @@ const [showAddRecipe, setShowAddRecipe] = useState(false);
 const [editingRecipe, setEditingRecipe] = useState(null); // recipe object
 const [showAddShoppingItem, setShowAddShoppingItem] = useState(false);
 const [newShoppingItem, setNewShoppingItem] = useState({ name: "", qty: "", unit: "", store: "Woolworths" });
-const [compactShopping, setCompactShopping] = useState(false);
+const [shoppingWeekOffset, setShoppingWeekOffset] = useState(0);
 const [shoppingListSnapshot, setShoppingListSnapshot] = useState(null);
 const [recipeTab, setRecipeTab] = useState("recipes");
 const [newGoalText, setNewGoalText] = useState("");
@@ -829,11 +829,14 @@ const safeShoppingList = Array.isArray(shoppingList) ? shoppingList : [];
 const recipesRef = useRef(recipes);
 useEffect(() => { recipesRef.current = recipes; }, [recipes]);
 
+const shoppingWeekStart = useMemo(() => addDays(weekStart, shoppingWeekOffset * 7), [weekStart, shoppingWeekOffset]);
+const [shoppingWeekData, , shoppingWeekReady] = useSharedState(getWeekKey(shoppingWeekStart), defaultWeek, handleRemoteChange);
+
 useEffect(() => {
-  if (!loaded) return;
-  const generated = buildShoppingListFromWeek(week, recipesRef.current, standaloneIngredients);
+  if (!loaded || !shoppingWeekReady) return;
+  const generated = buildShoppingListFromWeek(shoppingWeekData, recipesRef.current, standaloneIngredients);
   setShoppingList(prev => mergeGeneratedShoppingList(generated, prev));
-}, [loaded, week]);
+}, [loaded, shoppingWeekData, shoppingWeekOffset]);
 
 function mergeGeneratedShoppingList(generated, existing = []) {
   const existingById = new Map((Array.isArray(existing) ? existing : []).map(item => [item.id, item]));
@@ -1803,6 +1806,16 @@ return (
 {view === "shopping" && (
   <div style={{ padding: "14px" }} className="fadeIn">
     <div style={{ position: "sticky", top: 76, zIndex: 90, background: "#0c0c0a", paddingBottom: 10, marginBottom: 4, marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14, paddingTop: 10, borderBottom: "1px solid #1a1814" }}>
+<div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+  <button className="btn" onClick={() => setShoppingWeekOffset(0)}
+    style={{ flex: 1, padding: "9px", background: shoppingWeekOffset === 0 ? "#c8a96e" : "#1e1c18", color: shoppingWeekOffset === 0 ? "#0c0c0a" : "#888" }}>
+    This Week
+  </button>
+  <button className="btn" onClick={() => setShoppingWeekOffset(1)}
+    style={{ flex: 1, padding: "9px", background: shoppingWeekOffset === 1 ? "#c8a96e" : "#1e1c18", color: shoppingWeekOffset === 1 ? "#0c0c0a" : "#888" }}>
+    Next Week
+  </button>
+</div>
 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0, gap: 8 }}>
       <button className="btn" onClick={() => setShowAddShoppingItem(true)} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "9px 15px" }}>+ Custom item</button>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
