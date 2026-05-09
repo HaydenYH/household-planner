@@ -2582,7 +2582,13 @@ return (
                           setSnackUnit(unit);
                         }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: selectedSnackIng?.name === ing.name ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${selectedSnackIng?.name === ing.name ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
                           <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
-                          <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                          {(() => {
+                            const standalone = (standaloneIngredients || []).find(i => i.name.toLowerCase() === ing.name.toLowerCase());
+                            const brand = standalone?.brand;
+                            return brand
+                              ? <span className="dm" style={{ fontSize: 11, color: "#888", padding: "2px 8px", borderRadius: 100, background: "#1e1c18" }}>{brand}</span>
+                              : <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>;
+                          })()}
                         </div>
                         {selectedSnackIng?.name === ing.name && (
                           <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
