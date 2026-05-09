@@ -704,7 +704,19 @@ function handleRemoteChange(key, who) {
 }
 
 const [view, setView] = useState("week");
-const [selectedDay, setSelectedDay] = useState(0);
+const [selectedDay, setSelectedDay] = useState(() => {
+  const today = new Date();
+  const diff = today.getDay() === 0 ? -6 : 1 - today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
+  const dayIndex = DAYS.findIndex((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d.toDateString() === today.toDateString();
+  });
+  return dayIndex >= 0 ? dayIndex : 0;
+});
 const [weekStart, setWeekStart] = useState(getWeekStart());
 const defaultWeek = useMemo(() => buildEmptyWeek(), []);
 
