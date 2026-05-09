@@ -2152,24 +2152,72 @@ return (
                     <input type="number" value={stats.height || ""} onChange={e => setWeightData(p => ({ ...p, stats: { ...p.stats, height: e.target.value } }))}
                       placeholder="e.g. 178" style={{ width: "100%" }} />
                   </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>Activity Level</div>
+                    <select value={stats.activeness || "sedentary"} onChange={e => setWeightData(p => ({ ...p, stats: { ...p.stats, activeness: e.target.value } }))} style={{ width: "100%" }}>
+                      {ACTIVENESS.map(a => (
+                        <option key={a.key} value={a.key}>{a.label} — {a.desc}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* ── Goal Card ── */}
+                <div className="card" style={{ padding: 16, marginBottom: 12, borderColor: color + "44" }}>
+                  <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>🎯 Weight Goal</div>
                   <div style={{ marginBottom: 12 }}>
                     <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>Goal Weight (kg)</div>
                     <input type="number" value={stats.goalWeight || ""} onChange={e => setWeightData(p => ({ ...p, stats: { ...p.stats, goalWeight: e.target.value } }))}
                       placeholder="e.g. 80" style={{ width: "100%" }} />
                   </div>
-                  <div style={{ marginBottom: 4 }}>
-                    <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 8 }}>Activity Level</div>
-                    {ACTIVENESS.map(a => (
-                      <div key={a.key} onClick={() => setWeightData(p => ({ ...p, stats: { ...p.stats, activeness: a.key } }))}
-                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, marginBottom: 6, background: stats.activeness === a.key ? color + "1a" : "#0c0c0a", border: `1.5px solid ${stats.activeness === a.key ? color : "#252320"}`, cursor: "pointer" }}>
-                        <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${stats.activeness === a.key ? color : "#555"}`, background: stats.activeness === a.key ? color : "transparent", flexShrink: 0 }} />
-                        <div>
-                          <div className="dm" style={{ fontSize: 13, fontWeight: 600, color: stats.activeness === a.key ? color : "#ede8d8" }}>{a.label}</div>
-                          <div className="dm" style={{ fontSize: 11, color: "#555" }}>{a.desc}</div>
-                        </div>
-                      </div>
-                    ))}
+                  <div style={{ marginBottom: 12 }}>
+                    <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>Target Date</div>
+                    <input type="date" value={stats.goalDate || ""} onChange={e => setWeightData(p => ({ ...p, stats: { ...p.stats, goalDate: e.target.value } }))}
+                      style={{ width: "100%" }} />
                   </div>
+                  {(() => {
+                    if (!stats.goalWeight || !stats.goalDate || !latestWeight || !tdee) return null;
+                    const today = new Date();
+                    const target = new Date(stats.goalDate);
+                    const daysLeft = Math.round((target - today) / (1000 * 60 * 60 * 24));
+                    if (daysLeft <= 0) return <div className="dm" style={{ fontSize: 12, color: "#f44336" }}>Target date has passed</div>;
+                    const kgToLose = parseFloat(latestWeight) - parseFloat(stats.goalWeight);
+                    if (kgToLose <= 0) return (
+                      <div style={{ background: "#1a3a1a", borderRadius: 10, padding: "12px 14px", border: "1px solid #4caf5044" }}>
+                        <div className="dm" style={{ fontSize: 13, color: "#4caf50", fontWeight: 700 }}>🎉 You've reached your goal weight!</div>
+                      </div>
+                    );
+                    const totalCalDeficit = kgToLose * 7700;
+                    const dailyDeficit = totalCalDeficit / daysLeft;
+                    const dailyCals = Math.round(tdee - dailyDeficit);
+                    const kgPerWeek = parseFloat(((dailyDeficit * 7) / 7700).toFixed(2));
+                    const isAggressive = dailyDeficit > 1000;
+                    const isTooLow = dailyCals < 1200;
+                    return (
+                      <div style={{ background: "#0c0c0a", borderRadius: 10, padding: "14px", border: `1px solid ${isTooLow || isAggressive ? "#f4433644" : color + "44"}` }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
+                          <span style={{ fontSize: 28, fontWeight: 700, color: isTooLow ? "#f44336" : color, fontFamily: "DM Sans, sans-serif" }}>{dailyCals}</span>
+                          <span className="dm" style={{ fontSize: 12, color: "#555" }}>cal/day needed</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 12, marginBottom: 8 }}>
+                          <div>
+                            <div className="dm" style={{ fontSize: 12, color: "#888" }}>{daysLeft} days left</div>
+                          </div>
+                          <div>
+                            <div className="dm" style={{ fontSize: 12, color: "#888" }}>{kgToLose.toFixed(1)}kg to lose</div>
+                          </div>
+                          <div>
+                            <div className="dm" style={{ fontSize: 12, color: "#5c9fe0" }}>{kgPerWeek}kg/wk</div>
+                          </div>
+                        </div>
+                        {(isTooLow || isAggressive) && (
+                          <div className="dm" style={{ fontSize: 11, color: "#f44336", marginTop: 4 }}>
+                            ⚠️ {isTooLow ? "This is below a safe minimum of 1200 cal. Consider extending your target date." : "This is an aggressive deficit. Consider extending your target date."}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 {tdee && (
                   <div className="card" style={{ padding: 16, marginBottom: 12, borderColor: color + "44" }}>
