@@ -725,6 +725,7 @@ const [recipes, setRecipes, recipesReady] = useSharedState("recipes", DEFAULT_RE
 const [week, setWeek, weekReady] = useSharedState(getWeekKey(weekStart), defaultWeek, handleRemoteChange);
 const [shoppingList, setShoppingList, shopReady] = useSharedState("shopping", [], handleRemoteChange);
 const [goals, setGoals, goalsReady] = useSharedState("goals", buildEmptyGoals(), handleRemoteChange);
+const [standaloneIngredients, setStandaloneIngredients] = useSharedState("ingredients", [], handleRemoteChange);
 const [weightData, setWeightData] = useSharedState(`weight-${activeUserName}`, { stats: { height: "", activeness: "sedentary", goalWeight: "" }, weighins: {}, tdeeOverride: null }, handleRemoteChange);
 const [checkedMeat, setCheckedMeat] = useSharedState("shopping-checked-Meat", {}, handleRemoteChange);
 const [checkedBreadDairy, setCheckedBreadDairy] = useSharedState("shopping-checked-BreadDairy", {}, handleRemoteChange);
