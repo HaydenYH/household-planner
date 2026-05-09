@@ -1341,63 +1341,7 @@ return (
         );
       })}
 
-{/* ── Day Notes ── */}
-    {(() => {
-      const day = DAYS[selectedDay];
-      const notes = week[day]?.notes || [];
-      return (
-        <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: "#5c9fe033" }}>
-          <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 10 }}>
-            📝 Day Notes
-          </div>
-          {notes.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
-              {notes.map((note, idx) => (
-                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0c0c0a", borderRadius: 8, padding: "8px 10px", border: "1px solid #252320" }}>
-                  <span className="dm" style={{ fontSize: 13, color: "#ede8d8", flex: 1 }}>{note}</span>
-                  <button onClick={() => {
-                    setWeek(prev => ({
-                      ...prev,
-                      [day]: { ...prev[day], notes: prev[day].notes.filter((_, i) => i !== idx) }
-                    }));
-                  }} style={{ background: "none", border: "none", color: "#444", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              id="dayNoteInput"
-              placeholder="e.g. Had a pie at lunch..."
-              style={{ flex: 1 }}
-              onKeyDown={e => {
-                if (e.key === "Enter" && e.target.value.trim()) {
-                  const val = e.target.value.trim();
-                  setWeek(prev => ({
-                    ...prev,
-                    [day]: { ...prev[day], notes: [...(prev[day].notes || []), val] }
-                  }));
-                  e.target.value = "";
-                }
-              }}
-            />
-            <button className="btn" onClick={() => {
-              const input = document.getElementById("dayNoteInput");
-              if (input?.value.trim()) {
-                const val = input.value.trim();
-                setWeek(prev => ({
-                  ...prev,
-                  [day]: { ...prev[day], notes: [...(prev[day].notes || []), val] }
-                }));
-                input.value = "";
-              }
-            }} style={{ background: "#5c9fe0", color: "#0c0c0a", padding: "9px 16px" }}>
-              Add
-            </button>
-          </div>
-        </div>
-      );
-    })()}
+
 
     {/* ── Snack Cards ── */}
       {MEMBERS.filter(m => !activeUser || m === activeUser).map(member => {
@@ -1558,6 +1502,65 @@ return (
                 </div>
               </>
             )}
+          </div>
+        );
+      })()}
+
+      {/* ── Day Notes (per person) ── */}
+      {activeUser && (() => {
+        const day = DAYS[selectedDay];
+        const notes = week[day]?.[`notes_${activeUser}`] || [];
+        const color = MEMBER_COLORS[activeUser];
+        return (
+          <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: color + "33" }}>
+            <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 10 }}>
+              📝 {activeUser}'s Notes
+            </div>
+            {notes.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+                {notes.map((note, idx) => (
+                  <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0c0c0a", borderRadius: 8, padding: "8px 10px", border: "1px solid #252320" }}>
+                    <span className="dm" style={{ fontSize: 13, color: "#ede8d8", flex: 1 }}>{note}</span>
+                    <button onClick={() => {
+                      setWeek(prev => ({
+                        ...prev,
+                        [day]: { ...prev[day], [`notes_${activeUser}`]: prev[day][`notes_${activeUser}`].filter((_, i) => i !== idx) }
+                      }));
+                    }} style={{ background: "none", border: "none", color: "#444", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                id="dayNoteInput"
+                placeholder="e.g. Had a pie at lunch..."
+                style={{ flex: 1 }}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && e.target.value.trim()) {
+                    const val = e.target.value.trim();
+                    setWeek(prev => ({
+                      ...prev,
+                      [day]: { ...prev[day], [`notes_${activeUser}`]: [...(prev[day][`notes_${activeUser}`] || []), val] }
+                    }));
+                    e.target.value = "";
+                  }
+                }}
+              />
+              <button className="btn" onClick={() => {
+                const input = document.getElementById("dayNoteInput");
+                if (input?.value.trim()) {
+                  const val = input.value.trim();
+                  setWeek(prev => ({
+                    ...prev,
+                    [day]: { ...prev[day], [`notes_${activeUser}`]: [...(prev[day][`notes_${activeUser}`] || []), val] }
+                  }));
+                  input.value = "";
+                }
+              }} style={{ background: color, color: "#0c0c0a", padding: "9px 16px" }}>
+                Add
+              </button>
+            </div>
           </div>
         );
       })()}
