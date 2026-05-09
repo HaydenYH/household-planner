@@ -453,7 +453,6 @@ function useSharedState(key, defaultValue, onRemoteChange) {
     setSynced(false);
     setState(defaultValue);
     sb.get(key).then(val => {
-      console.log("Supabase fetch for key:", key, "got:", val);
       if (val !== null) {
         setState(val);
         lastSavedRef.current = val;
@@ -461,7 +460,7 @@ function useSharedState(key, defaultValue, onRemoteChange) {
         lastSavedRef.current = null;
       }
       setSynced(true);
-    }).catch((err) => { console.error("Supabase fetch error:", err); setSynced(true); });
+    }).catch(() => setSynced(true));
   }, [key]);
 
   useEffect(() => {
@@ -1162,14 +1161,22 @@ return (
             <button key={d} onClick={() => setSelectedDay(i)}
               className="day-tab"
               style={{
-                background: isSelected ? "#c8a96e" : isToday ? "#c8a96e33" : isPast ? "#2a1a1a" : "#1a1814",
-                color: isSelected ? "#0c0c0a" : isToday ? "#c8a96e" : isPast ? "#f4433688" : "#666",
-                border: isToday && !isSelected ? "1px solid #c8a96e55" : isPast && !isSelected ? "1px solid #f4433633" : "none",
-                position: "relative"
+                background: isSelected ? "#1a2a4a" : isToday ? "#c8a96e33" : isPast ? "#2a1a1a" : "#1a1814",
+                color: isSelected ? "#5c9fe0" : isToday ? "#c8a96e" : isPast ? "#f4433688" : "#666",
+                border: isSelected ? "1px solid #5c9fe055" : isToday && !isSelected ? "1px solid #c8a96e55" : isPast && !isSelected ? "1px solid #f4433633" : "1px solid transparent",
+                position: "relative",
+                width: 44,
+                minWidth: 44,
+                height: 52,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
               }}>
-              <div>{d}</div>
-              <div style={{ fontSize: 10, opacity: .7 }}>{dayDate.getDate()}</div>
-              {isToday && !isSelected && <div style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#c8a96e" }} />}
+              <div style={{ fontSize: 12, fontWeight: 600 }}>{d}</div>
+              <div style={{ fontSize: 11, fontWeight: 700 }}>{dayDate.getDate()}</div>
+              {isToday && !isSelected && <div style={{ position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#c8a96e" }} />}
             </button>
           );
         })}
