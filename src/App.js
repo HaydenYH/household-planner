@@ -725,6 +725,38 @@ const [week, setWeek, weekReady] = useSharedState(getWeekKey(weekStart), default
 const [shoppingList, setShoppingList, shopReady] = useSharedState("shopping", [], handleRemoteChange);
 const [goals, setGoals, goalsReady] = useSharedState("goals", buildEmptyGoals(), handleRemoteChange);
 const [standaloneIngredients, setStandaloneIngredients] = useSharedState("ingredients", [], handleRemoteChange);
+const [checkedMeat, setCheckedMeat] = useSharedState("shopping-checked-Meat", {}, handleRemoteChange);
+const [checkedBreadDairy, setCheckedBreadDairy] = useSharedState("shopping-checked-BreadDairy", {}, handleRemoteChange);
+const [checkedPasta, setCheckedPasta] = useSharedState("shopping-checked-Pasta", {}, handleRemoteChange);
+const [checkedVegetables, setCheckedVegetables] = useSharedState("shopping-checked-Vegetables", {}, handleRemoteChange);
+const [checkedFreezer, setCheckedFreezer] = useSharedState("shopping-checked-Freezer", {}, handleRemoteChange);
+const [checkedSauces, setCheckedSauces] = useSharedState("shopping-checked-Sauces", {}, handleRemoteChange);
+const [checkedCanned, setCheckedCanned] = useSharedState("shopping-checked-Canned", {}, handleRemoteChange);
+const [checkedSnacks, setCheckedSnacks] = useSharedState("shopping-checked-Snacks", {}, handleRemoteChange);
+const [checkedOther, setCheckedOther] = useSharedState("shopping-checked-Other", {}, handleRemoteChange);
+
+const categoryChecked = {
+  "Meat": checkedMeat,
+  "Bread / Dairy": checkedBreadDairy,
+  "Pasta": checkedPasta,
+  "Vegetables": checkedVegetables,
+  "Freezer": checkedFreezer,
+  "Sauces & Spices": checkedSauces,
+  "Canned & Jarred": checkedCanned,
+  "Snacks & Treats": checkedSnacks,
+  "Other": checkedOther,
+};
+const setCategoryChecked = {
+  "Meat": setCheckedMeat,
+  "Bread / Dairy": setCheckedBreadDairy,
+  "Pasta": setCheckedPasta,
+  "Vegetables": setCheckedVegetables,
+  "Freezer": setCheckedFreezer,
+  "Sauces & Spices": setCheckedSauces,
+  "Canned & Jarred": setCheckedCanned,
+  "Snacks & Treats": setCheckedSnacks,
+  "Other": setCheckedOther,
+};
 
 
 
@@ -851,8 +883,17 @@ setWeekStart(prev => addDays(prev, offset));
 setSelectedDay(0);
 }
 
-function toggleCheck(itemId) {
-setShoppingList(prev => Array.isArray(prev) ? prev.map(item => item.id === itemId ? { ...item, checked: !item.checked } : item) : []);
+function toggleCheck(itemId, category) {
+  const cat = category || "Other";
+  const setter = setCategoryChecked[cat];
+  if (setter) {
+    setter(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+  }
+}
+
+function isChecked(itemId, category) {
+  const cat = category || "Other";
+  return !!categoryChecked[cat]?.[itemId];
 }
 
 function removeItem(itemId) {
@@ -1762,10 +1803,11 @@ return (
           style={{ background: compactShopping ? "#c8a96e22" : "#1e1c18", color: compactShopping ? "#c8a96e" : "#888", padding: "7px 12px", border: `1px solid ${compactShopping ? "#c8a96e55" : "transparent"}` }}>
           {compactShopping ? "⊞ Full" : "⊟ Compact"}
         </button>
-        <div className="dm" style={{ fontSize: 11, color: "#555" }}>{safeShoppingList.filter(i => !i.checked).length} of {safeShoppingList.length} remaining</div>
-        {safeShoppingList.some(i => i.checked) && (
-          <button className="btn" onClick={() => setShoppingList(prev => Array.isArray(prev) ? prev.map(i => ({ ...i, checked: false })) : [])}
-            style={{ background: "#1e1c18", color: "#888", padding: "5px 12px", fontSize: 10 }}>
+        <div className="dm" style={{ fontSize: 11, color: "#555" }}>{safeShoppingList.filter(i => !isChecked(i.id, i.category || guessCategory(i.name))).length} of {safeShoppingList.length} remaining</div>
+        {CATEGORIES.some(cat => Object.keys(categoryChecked[cat] || {}).some(id => categoryChecked[cat][id])) && (
+          <button className="btn" onClick={() => {
+            CATEGORIES.forEach(cat => setCategoryChecked[cat]({}));
+          }} style={{ background: "#1e1c18", color: "#888", padding: "5px 12px", fontSize: 10 }}>
             Uncheck all
           </button>
         )}
@@ -1791,7 +1833,7 @@ return (
           const items = safeShoppingList.filter(i => (i.tempStore || i.store) === store);
           if (!items.length) return null;
           const sc = STORE_COLORS[store];
-          const remaining = items.filter(i => !i.checked).length;
+          const remaining = items.filter(i => !isChecked(i.id, i.category || guessCategory(i.name))).length;
           return (
             <div key={store} style={{ marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: sc.bg, borderRadius: 12, padding: "10px 14px", marginBottom: 6, border: `1px solid ${sc.accent}33` }}>
@@ -1832,18 +1874,24 @@ return (
                   return (
                     <div key={item.id} style={{ borderBottom: idx < items.length - 1 ? "1px solid #1a1814" : "none" }}>
                       {/* ── Main row — always visible ── */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}
-                        onClick={() => toggleCheck(item.id)}>
-                        <div className="check-box" style={{ border: `2px solid ${item.checked ? sc.accent : "#333"}`, background: item.checked ? sc.accent : "transparent", flexShrink: 0 }}>
-                          {item.checked && <svg width="12" height="9" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="#0c0c0a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                        </div>
-                        <div className="dm" style={{ flex: 1, fontSize: 14, fontWeight: 600, textDecoration: item.checked ? "line-through" : "none", opacity: item.checked ? 0.4 : 1 }}>{item.name}</div>
-                        <div className="dm" style={{ fontSize: 18, fontWeight: 700, color: item.checked ? "#555" : "#c8a96e", textDecoration: item.checked ? "line-through" : "none" }}>{toBuyText}</div>
-                        {!compactShopping && (
-                          <button onClick={e => { e.stopPropagation(); removeItem(item.id); }}
-                            style={{ background: "none", border: "none", color: "#333", fontSize: 20, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
-                        )}
-                      </div>
+                      {(() => {
+                        const itemCat = item.category || guessCategory(item.name);
+                        const checked = isChecked(item.id, itemCat);
+                        return (
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}
+                            onClick={() => toggleCheck(item.id, itemCat)}>
+                            <div className="check-box" style={{ border: `2px solid ${checked ? sc.accent : "#333"}`, background: checked ? sc.accent : "transparent", flexShrink: 0 }}>
+                              {checked && <svg width="12" height="9" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="#0c0c0a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                            </div>
+                            <div className="dm" style={{ flex: 1, fontSize: 14, fontWeight: 600, textDecoration: checked ? "line-through" : "none", opacity: checked ? 0.4 : 1 }}>{item.name}</div>
+                            <div className="dm" style={{ fontSize: 18, fontWeight: 700, color: checked ? "#555" : "#c8a96e", textDecoration: checked ? "line-through" : "none" }}>{toBuyText}</div>
+                            {!compactShopping && (
+                              <button onClick={e => { e.stopPropagation(); removeItem(item.id); }}
+                                style={{ background: "none", border: "none", color: "#333", fontSize: 20, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* ── Expanded row — hidden in compact mode ── */}
                       {!compactShopping && (
