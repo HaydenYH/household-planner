@@ -697,7 +697,8 @@ const bannerTimer = useRef(null);
 
 function handleRemoteChange(key, who) {
   if (who === activeUserName) return;
-  const label = key === "recipes" ? "the recipe book" : key === "shopping" ? "the shopping list" : key.startsWith("week-") ? "the weekly planner" : key === "goals" ? "the goals" : key === "ingredients" ? "the ingredients" : key;
+  if (key === "shopping" || key.startsWith("shopping-checked-")) return;
+  const label = key === "recipes" ? "the recipe book" : key.startsWith("week-") ? "the weekly planner" : key === "goals" ? "the goals" : key === "ingredients" ? "the ingredients" : key;
   setConflictBanner({ who, label });
   clearTimeout(bannerTimer.current);
   bannerTimer.current = setTimeout(() => setConflictBanner(null), 10000);
