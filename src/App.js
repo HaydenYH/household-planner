@@ -429,7 +429,10 @@ return mon;
 }
 
 function getWeekKey(startDate) {
-return `week-${startDate.toISOString().slice(0, 10)}`;
+const y = startDate.getFullYear();
+const m = String(startDate.getMonth() + 1).padStart(2, "0");
+const d = String(startDate.getDate()).padStart(2, "0");
+return `week-${y}-${m}-${d}`;
 }
 
 function addDays(date, days) {
