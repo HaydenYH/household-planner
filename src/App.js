@@ -2519,11 +2519,20 @@ return (
 
 {/* ── Snack Picker Modal ── */}
   {snackPickerFor && (
-    <div className="overlay" onClick={() => setSnackPickerFor(null)}>
-      <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "85vh", overflowY: "auto", paddingBottom: 120 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>🍎 {snackPickerFor.member}'s Snack</h2>
-          <button onClick={() => { setSnackPickerFor(null); setSelectedSnackIng(null); }} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
+    <div className="overlay" onClick={() => setSnackPickerFor(null)} style={{ alignItems: "flex-end" }}>
+      <div className="sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "60vh", overflowY: "auto", paddingBottom: 24, position: "relative" }}>
+        <div style={{ position: "sticky", top: 0, background: "#161512", paddingBottom: 12, zIndex: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <h2 style={{ margin: 0, fontSize: 18 }}>🍎 {snackPickerFor.member}'s Snack</h2>
+            <button onClick={() => { setSnackPickerFor(null); setSelectedSnackIng(null); }} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
+          </div>
+          <input
+            value={snackSearch}
+            onChange={e => setSnackSearch(e.target.value)}
+            placeholder="Search ingredients..."
+            style={{ width: "100%" }}
+            autoFocus
+          />
         </div>
         {(() => {
           const snackKey = `snack_${snackPickerFor.member}`;
@@ -2554,13 +2563,6 @@ return (
                   Remove snack
                 </button>
               )}
-              <input
-                value={snackSearch}
-                onChange={e => setSnackSearch(e.target.value)}
-                placeholder="Search ingredients..."
-                style={{ width: "100%", marginBottom: 14 }}
-                autoFocus
-              />
               {grouped.map(cat => (
                 <div key={cat} style={{ marginBottom: 14 }}>
                   <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 6 }}>
@@ -2568,7 +2570,7 @@ return (
                   </div>
                   {filtered.filter(i => (i.category || guessCategory(i.name)) === cat).sort((a,b) => a.name.localeCompare(b.name)).map(ing => {
                     const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
-                    const isSelected = currentSnackRecipe?.name === ing.name;
+                    const isSelected = selectedSnackIng?.name === ing.name;
                     return (
                       <div key={ing.name}>
                         <div onClick={() => {
@@ -2580,7 +2582,7 @@ return (
                           setSelectedSnackIng({ ...ing, unit });
                           setSnackQty(1);
                           setSnackUnit(unit);
-                        }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: selectedSnackIng?.name === ing.name ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${selectedSnackIng?.name === ing.name ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
+                        }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: isSelected ? "#c8a96e1a" : "#0c0c0a", border: `1.5px solid ${isSelected ? "#c8a96e" : "#252320"}`, cursor: "pointer" }}>
                           <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
                           {(() => {
                             const standalone = (standaloneIngredients || []).find(i => i.name.toLowerCase() === ing.name.toLowerCase());
@@ -2590,7 +2592,7 @@ return (
                               : <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>;
                           })()}
                         </div>
-                        {selectedSnackIng?.name === ing.name && (
+                        {isSelected && (
                           <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #c8a96e" }}>
                             <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Total qty for whole meal</div>
                             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -2615,20 +2617,20 @@ return (
                               const snackId = `snack-ing-${ing.name.toLowerCase().replace(/\s+/g, "-")}`;
                               const snackRecipeObj = { id: snackId, name: ing.name, types: ["Snack"], serves: 1, ingredients: [{ name: ing.name, qty: snackQty, unit: snackUnit, store: ing.store, category: ing.category || guessCategory(ing.name) }] };
                               setRecipes(prev => {
-  const exists = prev.find(r => r.id === snackId);
-  if (exists) return prev.map(r => r.id === snackId ? snackRecipeObj : r);
-  return [...prev, snackRecipeObj];
-});
-setWeek(prev => {
-  const existing = prev[snackPickerFor.day]?.[snackKey]?.snacks || [];
-  return {
-    ...prev,
-    [snackPickerFor.day]: {
-      ...prev[snackPickerFor.day],
-      [snackKey]: { snacks: [...existing, { mealId: snackId, qty: snackQty, unit: snackUnit }] }
-    }
-  };
-});
+                                const exists = prev.find(r => r.id === snackId);
+                                if (exists) return prev.map(r => r.id === snackId ? snackRecipeObj : r);
+                                return [...prev, snackRecipeObj];
+                              });
+                              setWeek(prev => {
+                                const existing = prev[snackPickerFor.day]?.[snackKey]?.snacks || [];
+                                return {
+                                  ...prev,
+                                  [snackPickerFor.day]: {
+                                    ...prev[snackPickerFor.day],
+                                    [snackKey]: { snacks: [...existing, { mealId: snackId, qty: snackQty, unit: snackUnit }] }
+                                  }
+                                };
+                              });
                               setSelectedSnackIng(null);
                               setSnackPickerFor(null);
                             }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", width: "100%" }}>
@@ -2650,8 +2652,7 @@ setWeek(prev => {
       </div>
     </div>
   )}
-
-  {/* ── Sides Picker Modal ── */}
+{/* ── Sides Picker Modal ── */}
   {sidesPickerFor && (
     <div className="overlay" onClick={() => { setSidesPickerFor(null); setSelectedSnackIng(null); }}>
       <div className="sheet" onClick={e => e.stopPropagation()}>
