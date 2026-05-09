@@ -859,7 +859,13 @@ setNewShoppingItem({ name: "", qty: "", unit: "", store: "Woolworths" });
 
 function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes, currentStandaloneIngredients = []) {
   const consolidated = {};
-  DAYS.forEach(day => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  DAYS.forEach((day, dayIndex) => {
+    const dayDate = addDays(weekStart, dayIndex);
+    dayDate.setHours(0, 0, 0, 0);
+    const isPast = dayDate < today;
+    if (isPast) return;
     // Regular meals
     MEAL_TYPES.forEach(mealType => {
       const slot = currentWeek[day]?.[mealType];
