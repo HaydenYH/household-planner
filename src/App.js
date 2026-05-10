@@ -589,7 +589,7 @@ return (
   </div>
   <div style={{ marginBottom: 16 }}>
     <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Serves</div>
-    <input type="number" min="1" value={draft.serves || ""} onChange={e => setDraft(p => ({ ...p, serves: parseInt(e.target.value) || 1 }))} placeholder="e.g. 4" style={{ width: "100%" }} />
+    <input type="number" min="1" value={draft.serves ?? ""} onChange={e => setDraft(p => ({ ...p, serves: e.target.value === "" ? "" : parseInt(e.target.value) || 1 }))} onBlur={e => { if (!e.target.value) setDraft(p => ({ ...p, serves: 1 })); }} placeholder="e.g. 4" style={{ width: "100%" }} />
   </div>
   <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Ingredients</div>
   {draft.ingredients.map((ing, idx) => (
