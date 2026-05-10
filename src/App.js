@@ -543,7 +543,7 @@ function IngredientAutocomplete({ value, onChange, onSelectFull, recipes, extraI
 }
 
 
-function RecipeForm({ initial, onSave, onClose, title, recipes }) {
+function RecipeForm({ initial, onSave, onClose, title, recipes, extraIngredients = [] }) {
 const [draft, setDraft] = useState(initial);
 const valid = draft.name.trim().length > 0;
 
@@ -604,9 +604,8 @@ return (
             setDraft(p => ({ ...p, ingredients: a }));
           }}
           recipes={recipes}
-          extraIngredients={standaloneIngredients || []}
+          extraIngredients={extraIngredients}
         />
-        
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <input type="number" value={ing.qty || ""} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 90 }} />
@@ -2560,6 +2559,7 @@ return (
       <RecipeForm
   title="New Recipe"
   recipes={recipes}
+  extraIngredients={standaloneIngredients}
   initial={{ name: "", types: ["Dinner"], serves: 4, cookedInOil: false, ingredients: [{ name: "", qty: 0, unit: "", store: "Woolworths", customUnit: "" }] }}
   onSave={saveNewRecipe}
   onClose={() => setShowAddRecipe(false)}
@@ -2573,6 +2573,7 @@ return (
       <RecipeForm
   title={`Edit: ${editingRecipe.name}`}
   recipes={recipes}
+  extraIngredients={standaloneIngredients}
   initial={editingRecipe}
   onSave={saveEditedRecipe}
   onClose={() => setEditingRecipe(null)}
@@ -2884,16 +2885,7 @@ return (
               <div className="dm" style={{ fontSize: 11, color: "#5c9fe0", marginBottom: 10 }}>
                 = {editingMacros.cal} kcal stored
               </div>
-            )}<div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>Per 100g</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
-              {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
-                <div key={key}>
-                  <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>{label}</div>
-                  <input type="number" min="0" value={editingMacros[key] ?? ""} onChange={e => setEditingMacros(p => ({ ...p, [key]: e.target.value }))}
-                    placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
-                </div>
-              ))}
-            </div>
+            )}
             <button className="btn" onClick={() => {
               const name = ingredientMacroPopup.name;
               const parsedMacros = {
