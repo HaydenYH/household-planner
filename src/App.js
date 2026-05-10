@@ -1579,9 +1579,10 @@ return (
         }
 
         const calDiff = goalCals ? Math.round(totalCal) - goalCals : null;
-        const kgToday = calDiff !== null ? parseFloat((calDiff / 7700).toFixed(3)) : null;
-        const kgWeek = kgToday !== null ? parseFloat((kgToday * 7).toFixed(2)) : null;
         const isOver = calDiff > 0;
+        const tdeeCalDiff = tdee ? Math.round(totalCal) - tdee : null;
+        const kgToday = tdeeCalDiff !== null ? parseFloat((tdeeCalDiff / 7700).toFixed(3)) : null;
+        const kgWeek = kgToday !== null ? parseFloat((kgToday * 7).toFixed(2)) : null;
 
         return (
           <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: color + "33" }}>
