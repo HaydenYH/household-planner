@@ -606,12 +606,7 @@ return (
           recipes={recipes}
           extraIngredients={standaloneIngredients || []}
         />
-        {ing.name.trim().length > 2 && !recipes.some(r => r.ingredients.some(i => i.name.toLowerCase() === ing.name.toLowerCase())) && (
-          <div className="dm" style={{ fontSize: 11, color: "#5c9fe0", marginTop: 5, cursor: "pointer" }}
-            onClick={() => setShowAddIngredient({ prefill: ing.name.trim() })}>
-            + Add "{ing.name.trim()}" to ingredient database
-          </div>
-        )}
+        
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <input type="number" value={ing.qty || ""} onChange={e => updateIng(idx, "qty", parseFloat(e.target.value) || 0)} placeholder="Qty" style={{ width: 90 }} />
@@ -2838,7 +2833,35 @@ return (
               <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Brand <span style={{ color: "#444" }}>(optional)</span></div>
               <input value={editingMacros.brand ?? ""} onChange={e => setEditingMacros(p => ({ ...p, brand: e.target.value }))} placeholder="e.g. Woolworths" style={{ width: "100%" }} />
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Per 100g</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+              <div>
+                <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>Calories (kcal)</div>
+                <input type="number" min="0" value={editingMacros.cal ?? ""} onChange={e => {
+                  const val = parseFloat(e.target.value);
+                  setEditingMacros(p => ({ ...p, cal: isNaN(val) ? "" : val, _kj: isNaN(val) ? "" : Math.round(val * 4.184) }));
+                }} placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
+              </div>
+              <div>
+                <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>Energy (kJ)</div>
+                <input type="number" min="0" value={editingMacros._kj ?? ""} onChange={e => {
+                  const val = parseFloat(e.target.value);
+                  const kcal = isNaN(val) ? "" : Math.round(val / 4.184);
+                  setEditingMacros(p => ({ ...p, _kj: isNaN(val) ? "" : val, cal: kcal }));
+                }} placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+              {[["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
+                <div key={key}>
+                  <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>{label}</div>
+                  <input type="number" min="0" value={editingMacros[key] ?? ""} onChange={e => {
+                    const val = parseFloat(e.target.value);
+                    setEditingMacros(p => ({ ...p, [key]: isNaN(val) ? "" : val }));
+                  }} placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
+                </div>
+              ))}
+            </div><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em" }}>Per 100g</div>
               <button className="btn" onClick={() => setEditingMacros(p => ({ ...p, _useKj: !p._useKj }))}
                 style={{ padding: "4px 10px", background: editingMacros._useKj ? "#1e2a3a" : "#1a1814", color: editingMacros._useKj ? "#5c9fe0" : "#555", fontSize: 10, border: `1px solid ${editingMacros._useKj ? "#5c9fe044" : "transparent"}` }}>
