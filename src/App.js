@@ -790,6 +790,8 @@ const [sidesSearch, setSidesSearch] = useState("");
 const [showMissingMacrosOnly, setShowMissingMacrosOnly] = useState(false);
 const [ingredientPopupTab, setIngredientPopupTab] = useState("macros");
 const [ingredientSearch, setIngredientSearch] = useState("");
+const [showUnloggedForm, setShowUnloggedForm] = useState(false);
+const [newUnloggedEntry, setNewUnloggedEntry] = useState({ title: "", cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" });
 const [keyboardHeight, setKeyboardHeight] = useState(0);
 useEffect(() => {
   const handler = () => {
@@ -1635,8 +1637,10 @@ return (
         const unloggedKey = `unlogged_${activeUserName}`;
         const unlogged = week[day]?.[unloggedKey] || [];
         const color = MEMBER_COLORS[activeUserName];
-        const [showForm, setShowForm] = useState(false);
-        const [newEntry, setNewEntry] = useState({ title: "", cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" });
+        const showForm = showUnloggedForm;
+        const setShowForm = setShowUnloggedForm;
+        const newEntry = newUnloggedEntry;
+        const setNewEntry = setNewUnloggedEntry;
 
         return (
           <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: color + "22" }}>
