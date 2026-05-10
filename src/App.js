@@ -174,10 +174,10 @@ const MACRO_DB = {
 };
 
 function getMacros(name, standaloneIngs = []) {
-  const fromDB = MACRO_DB[name.toLowerCase()] || null;
-  if (fromDB) return fromDB;
   const fromStandalone = (standaloneIngs || []).find(i => i.name.toLowerCase() === name.toLowerCase());
   if (fromStandalone?.macros) return fromStandalone.macros;
+  const fromDB = MACRO_DB[name.toLowerCase()] || null;
+  if (fromDB) return fromDB;
   return null;
 }
 
@@ -604,6 +604,7 @@ return (
             setDraft(p => ({ ...p, ingredients: a }));
           }}
           recipes={recipes}
+          extraIngredients={standaloneIngredients || []}
         />
         {ing.name.trim().length > 2 && !recipes.some(r => r.ingredients.some(i => i.name.toLowerCase() === ing.name.toLowerCase())) && (
           <div className="dm" style={{ fontSize: 11, color: "#5c9fe0", marginTop: 5, cursor: "pointer" }}
