@@ -2862,30 +2862,7 @@ return (
                   }} placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
                 </div>
               ))}
-            </div><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em" }}>Per 100g</div>
-              <button className="btn" onClick={() => setEditingMacros(p => ({ ...p, _useKj: !p._useKj }))}
-                style={{ padding: "4px 10px", background: editingMacros._useKj ? "#1e2a3a" : "#1a1814", color: editingMacros._useKj ? "#5c9fe0" : "#555", fontSize: 10, border: `1px solid ${editingMacros._useKj ? "#5c9fe044" : "transparent"}` }}>
-                {editingMacros._useKj ? "kJ" : "kcal"}
-              </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
-              {[["cal", editingMacros._useKj ? "Energy (kJ)" : "Calories (kcal)"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
-                <div key={key}>
-                  <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>{label}</div>
-                  <input type="number" min="0" value={editingMacros[key] ?? ""} onChange={e => {
-                    let val = parseFloat(e.target.value);
-                    if (key === "cal" && editingMacros._useKj && !isNaN(val)) val = Math.round(val / 4.184);
-                    setEditingMacros(p => ({ ...p, [key]: isNaN(val) ? "" : val }));
-                  }} placeholder="—" style={{ width: "100%", padding: "7px 10px", fontSize: 13 }} />
-                </div>
-              ))}
-            </div>
-            {editingMacros._useKj && editingMacros.cal && (
-              <div className="dm" style={{ fontSize: 11, color: "#5c9fe0", marginBottom: 10 }}>
-                = {editingMacros.cal} kcal stored
-              </div>
-            )}
             <button className="btn" onClick={() => {
               const name = ingredientMacroPopup.name;
               const parsedMacros = {
