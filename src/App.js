@@ -2769,13 +2769,25 @@ return (
         {viewingRecipeTab === "ingredients" && (
           <div style={{ background: "#0c0c0a", borderRadius: 12, border: "1px solid #252320", overflow: "hidden" }}>
             {viewingRecipe.ingredients.map((ing, idx) => {
-              const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
+              const m = getMacros(ing.name, standaloneIngredients);
+              const grams = m ? getGramsForUnit(ing.name, ing.unit, parseFloat(ing.qty) || 0, standaloneIngredients) : null;
+              const cal = m && grams !== null ? Math.round(m.cal * grams / 100) : null;
+              const protein = m && grams !== null ? Math.round(m.protein * grams / 100) : null;
               return (
                 <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: idx < viewingRecipe.ingredients.length - 1 ? "1px solid #1a1814" : "none" }}>
-                  <span className="dm" style={{ fontSize: 13 }}>{ing.name}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span className="dm" style={{ fontSize: 12, color: "#888" }}>{ing.qty} {ing.unit}</span>
-                    <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                  <div>
+                    <div className="dm" style={{ fontSize: 13 }}>{ing.name}</div>
+                    <div className="dm" style={{ fontSize: 11, color: "#555" }}>{ing.qty} {ing.unit}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    {cal !== null ? (
+                      <>
+                        <span className="dm" style={{ fontSize: 12, color: "#c8a96e", fontWeight: 700 }}>{cal} cal</span>
+                        <span className="dm" style={{ fontSize: 12, color: "#5c9fe0" }}>{protein}g P</span>
+                      </>
+                    ) : (
+                      <span className="dm" style={{ fontSize: 11, color: "#444" }}>—</span>
+                    )}
                   </div>
                 </div>
               );
