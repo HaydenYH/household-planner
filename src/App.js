@@ -1467,9 +1467,11 @@ return (
       })}
 
       {/* ── Daily Macro Summary ── */}
-      {(() => {
+      {activeUserName && (() => {
         let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFibre = 0, totalSugar = 0;
         let hasMacros = false;
+        const color = MEMBER_COLORS[activeUserName];
+
         MEAL_TYPES.forEach(mt => {
           const slot = week[DAYS[selectedDay]]?.[mt];
           if (!slot?.mealId) return;
@@ -1485,8 +1487,6 @@ return (
           totalFibre += perServe.fibre;
           totalSugar += perServe.sugar;
           hasMacros = true;
-
-          // Include sides in daily totals
           const attendingCount = slot.attending?.length || 1;
           (slot.sides || []).forEach(side => {
             if (side.type === "recipe") {
@@ -1522,48 +1522,93 @@ return (
             }
           });
         });
-        if (activeUser) {
-          const snackKey = `snack_${activeUser}`;
-          const slot = week[DAYS[selectedDay]]?.[snackKey];
-          const snacks = slot?.snacks || [];
-          snacks.forEach(snack => {
-            const recipe = recipes.find(r => r.id === snack.mealId);
-            if (!recipe) return;
-            const m = calcMacrosForRecipe(recipe, standaloneIngredients);
-            if (m) {
-              totalCal += m.cal;
-              totalProtein += m.protein;
-              totalCarbs += m.carbs;
-              totalFat += m.fat;
-              totalFibre += m.fibre;
-              totalSugar += m.sugar;
-              hasMacros = true;
-            }
-          });
+
+        // Snacks for logged-in user
+        const snackKey = `snack_${activeUserName}`;
+        const snackSlot = week[DAYS[selectedDay]]?.[snackKey];
+        (snackSlot?.snacks || []).forEach(snack => {
+          const recipe = recipes.find(r => r.id === snack.mealId);
+          if (!recipe) return;
+          const m = calcMacrosForRecipe(recipe, standaloneIngredients);
+          if (m) {
+            totalCal += m.cal;
+            totalProtein += m.protein;
+            totalCarbs += m.carbs;
+            totalFat += m.fat;
+            totalFibre += m.fibre;
+            totalSugar += m.sugar;
+            hasMacros = true;
+          }
+        });
+
+        // Unlogged meals for logged-in user
+        const unloggedKey = `unlogged_${activeUserName}`;
+        const unlogged = week[DAYS[selectedDay]]?.[unloggedKey] || [];
+        unlogged.forEach(entry => {
+          totalCal += parseFloat(entry.cal) || 0;
+          totalProtein += parseFloat(entry.protein) || 0;
+          totalCarbs += parseFloat(entry.carbs) || 0;
+          totalFat += parseFloat(entry.fat) || 0;
+          totalFibre += parseFloat(entry.fibre) || 0;
+          totalSugar += parseFloat(entry.sugar) || 0;
+          if (entry.cal) hasMacros = true;
+        });
+
+        // Goal calories from weight data
+        const wStats = weightData?.stats || {};
+        const wWeighins = weightData?.weighins || {};
+        const wDates = Object.keys(wWeighins).sort();
+        const latestWeight = wDates.length > 0 ? parseFloat(wWeighins[wDates[wDates.length - 1]]) : null;
+        const heightCm = parseFloat(wStats.height) || 0;
+        const ACTIVENESS_MAP = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, extra: 1.9 };
+        const actMult = ACTIVENESS_MAP[wStats.activeness] || 1.2;
+        const bmr = latestWeight && heightCm ? Math.round(10 * latestWeight + 6.25 * heightCm - 5 * 25 + 5) : null;
+        const tdee = weightData?.tdeeOverride || (bmr ? Math.round(bmr * actMult) : null);
+        const goalWeight = parseFloat(wStats.goalWeight) || null;
+        const goalDate = wStats.goalDate || null;
+        let goalCals = null;
+        if (tdee && goalWeight && goalDate && latestWeight) {
+          const daysLeft = Math.round((new Date(goalDate) - new Date()) / (1000 * 60 * 60 * 24));
+          const kgToLose = latestWeight - goalWeight;
+          if (daysLeft > 0 && kgToLose > 0) {
+            const dailyDeficit = (kgToLose * 7700) / daysLeft;
+            goalCals = Math.round(tdee - dailyDeficit);
+          }
         }
+
+        const calDiff = goalCals ? Math.round(totalCal) - goalCals : null;
+        const kgToday = calDiff !== null ? parseFloat((calDiff / 7700).toFixed(3)) : null;
+        const kgWeek = kgToday !== null ? parseFloat((kgToday * 7).toFixed(2)) : null;
+        const isOver = calDiff > 0;
+
         return (
-          <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: "#c8a96e33" }}>
+          <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: color + "33" }}>
             <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 10 }}>
-              📊 Daily Totals
+              📊 {activeUserName}'s Daily Totals
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <select value={activeUser || ""} onChange={e => setActiveUser(e.target.value || null)} style={{ width: "100%", fontSize: 14, padding: "9px 13px", background: "#0c0c0a", border: "1.5px solid #252320", borderRadius: 10, color: "#ede8d8", cursor: "pointer" }}>
-                <option value="">Select Person's View to see daily macro totals</option>
-                {MEMBERS.map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
-            {activeUser && hasMacros && (
+            {hasMacros ? (
               <>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 12 }}>
-                  <span style={{ fontSize: 28, fontWeight: 700, color: "#c8a96e", fontFamily: "DM Sans, sans-serif" }}>{Math.round(totalCal)}</span>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
+                  <span style={{ fontSize: 28, fontWeight: 700, color, fontFamily: "DM Sans, sans-serif" }}>{Math.round(totalCal)}</span>
                   <span className="dm" style={{ fontSize: 12, color: "#555" }}>calories</span>
+                  {goalCals && (
+                    <span className="dm" style={{ fontSize: 12, color: "#555" }}>/ target {goalCals}</span>
+                  )}
                 </div>
+                {calDiff !== null && (
+                  <div style={{ background: isOver ? "#2a1a1a" : "#1a2a1a", borderRadius: 10, padding: "8px 12px", marginBottom: 12, border: `1px solid ${isOver ? "#f4433633" : "#4caf5033"}` }}>
+                    <div className="dm" style={{ fontSize: 13, fontWeight: 700, color: isOver ? "#f44336" : "#4caf50" }}>
+                      {isOver ? "+" : ""}{calDiff} cal {isOver ? "over" : "under"} target
+                    </div>
+                    <div className="dm" style={{ fontSize: 11, color: "#888", marginTop: 3 }}>
+                      {isOver ? "+" : ""}{kgToday} kg today · {isOver ? "+" : ""}{kgWeek} kg if every day this week
+                    </div>
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-                  {[["Protein", totalProtein, "#5c9fe0"], ["Carbs", totalCarbs, "#c8a96e"], ["Fat", totalFat, "#a78bca"]].map(([label, val, color]) => (
-                    <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 10, padding: "8px 10px", border: `1px solid ${color}33` }}>
-                      <div className="dm" style={{ fontSize: 16, fontWeight: 700, color }}>{Math.round(val)}g</div>
+                  {[["Protein", totalProtein, "#5c9fe0"], ["Carbs", totalCarbs, "#c8a96e"], ["Fat", totalFat, "#a78bca"]].map(([label, val, c]) => (
+                    <div key={label} style={{ flex: 1, background: "#0c0c0a", borderRadius: 10, padding: "8px 10px", border: `1px solid ${c}33` }}>
+                      <div className="dm" style={{ fontSize: 16, fontWeight: 700, color: c }}>{Math.round(val)}g</div>
                       <div className="dm" style={{ fontSize: 10, color: "#555" }}>{label}</div>
                     </div>
                   ))}
@@ -1577,6 +1622,82 @@ return (
                   ))}
                 </div>
               </>
+            ) : (
+              <div className="dm" style={{ fontSize: 12, color: "#444" }}>No meals logged yet today</div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── Unlogged Meals ── */}
+      {activeUserName && (() => {
+        const day = DAYS[selectedDay];
+        const unloggedKey = `unlogged_${activeUserName}`;
+        const unlogged = week[day]?.[unloggedKey] || [];
+        const color = MEMBER_COLORS[activeUserName];
+        const [showForm, setShowForm] = useState(false);
+        const [newEntry, setNewEntry] = useState({ title: "", cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" });
+
+        return (
+          <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: color + "22" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: unlogged.length > 0 || showForm ? 12 : 0 }}>
+              <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555" }}>
+                🍴 {activeUserName}'s Unlogged
+              </div>
+              <button className="meal-pill" onClick={() => setShowForm(p => !p)} style={{ borderColor: color + "55", color }}>
+                + Add
+              </button>
+            </div>
+            {unlogged.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: showForm ? 12 : 0 }}>
+                {unlogged.map((entry, idx) => (
+                  <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0c0c0a", borderRadius: 8, padding: "8px 10px", border: "1px solid #252320" }}>
+                    <div>
+                      <div className="dm" style={{ fontSize: 13, color: "#ede8d8", fontWeight: 600 }}>{entry.title || "Unlogged meal"}</div>
+                      <div className="dm" style={{ fontSize: 11, color: "#555" }}>
+                        {entry.cal ? `${entry.cal} cal` : "—"}
+                        {entry.protein ? ` · ${entry.protein}g P` : ""}
+                        {entry.carbs ? ` · ${entry.carbs}g C` : ""}
+                        {entry.fat ? ` · ${entry.fat}g F` : ""}
+                      </div>
+                    </div>
+                    <button onClick={() => {
+                      setWeek(prev => ({
+                        ...prev,
+                        [day]: { ...prev[day], [unloggedKey]: unlogged.filter((_, i) => i !== idx) }
+                      }));
+                    }} style={{ background: "none", border: "none", color: "#444", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {showForm && (
+              <div style={{ background: "#0c0c0a", borderRadius: 10, padding: "12px", border: "1px solid #252320" }}>
+                <input value={newEntry.title} onChange={e => setNewEntry(p => ({ ...p, title: e.target.value }))}
+                  placeholder="Title (e.g. Breakfast at café)" style={{ width: "100%", marginBottom: 10 }} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                  {[["cal", "Calories"], ["protein", "Protein (g)"], ["carbs", "Carbs (g)"], ["fat", "Fat (g)"], ["fibre", "Fibre (g)"], ["sugar", "Sugar (g)"]].map(([key, label]) => (
+                    <div key={key}>
+                      <div className="dm" style={{ fontSize: 9, color: "#444", marginBottom: 4 }}>{label}</div>
+                      <input type="number" min="0" value={newEntry[key]} onChange={e => setNewEntry(p => ({ ...p, [key]: e.target.value }))}
+                        placeholder="—" style={{ width: "100%", padding: "6px 8px", fontSize: 13 }} />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn" onClick={() => {
+                    if (!newEntry.cal && !newEntry.protein) return;
+                    setWeek(prev => ({
+                      ...prev,
+                      [day]: { ...prev[day], [unloggedKey]: [...(prev[day][unloggedKey] || []), { ...newEntry }] }
+                    }));
+                    setNewEntry({ title: "", cal: "", protein: "", carbs: "", fat: "", fibre: "", sugar: "" });
+                    setShowForm(false);
+                  }} style={{ flex: 1, background: color, color: "#0c0c0a", padding: "10px" }}>Save</button>
+                  <button className="btn" onClick={() => setShowForm(false)}
+                    style={{ background: "#1e1c18", color: "#888", padding: "10px 16px" }}>Cancel</button>
+                </div>
+              </div>
             )}
           </div>
         );
