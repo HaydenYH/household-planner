@@ -1265,6 +1265,74 @@ return (
   {/* ── Week View ── */}
   {view === "week" && (
     <div style={{ padding: "12px 14px 0" }} className="fadeIn">
+      {activeUserName && (() => {
+        const color = MEMBER_COLORS[activeUserName];
+        const wStats = weightData?.stats || {};
+        const wWeighins = weightData?.weighins || {};
+        const wDates = Object.keys(wWeighins).sort();
+        const latestWeight = wDates.length > 0 ? parseFloat(wWeighins[wDates[wDates.length - 1]]) : null;
+        const heightCm = parseFloat(wStats.height) || 0;
+        const ACTIVENESS_MAP = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, extra: 1.9 };
+        const actMult = ACTIVENESS_MAP[wStats.activeness] || 1.2;
+        const bmr = latestWeight && heightCm ? Math.round(10 * latestWeight + 6.25 * heightCm - 5 * 25 + 5) : null;
+        const tdee = weightData?.tdeeOverride || (bmr ? Math.round(bmr * actMult) : null);
+        if (!tdee) return null;
+
+        let weeklyCalTotal = 0;
+        let daysWithData = 0;
+        DAYS.forEach(day => {
+          let dayTotal = 0;
+          let hasMacros = false;
+          MEAL_TYPES.forEach(mt => {
+            const slot = week[day]?.[mt];
+            if (!slot?.mealId) return;
+            const recipe = recipes.find(r => r.id === slot.mealId);
+            if (!recipe) return;
+            const m = calcMacrosForRecipe(recipe, standaloneIngredients);
+            if (!m) return;
+            dayTotal += m.cal / (recipe.serves || 1);
+            hasMacros = true;
+          });
+          const snackKey = `snack_${activeUserName}`;
+          const snackSlot = week[day]?.[snackKey];
+          (snackSlot?.snacks || []).forEach(snack => {
+            const recipe = recipes.find(r => r.id === snack.mealId);
+            if (!recipe) return;
+            const m = calcMacrosForRecipe(recipe, standaloneIngredients);
+            if (m) { dayTotal += m.cal; hasMacros = true; }
+          });
+          const unloggedKey = `unlogged_${activeUserName}`;
+          const unlogged = week[day]?.[unloggedKey] || [];
+          unlogged.forEach(entry => { dayTotal += parseFloat(entry.cal) || 0; if (entry.cal) hasMacros = true; });
+          if (hasMacros) { weeklyCalTotal += dayTotal; daysWithData++; }
+        });
+
+        if (daysWithData === 0) return null;
+        const avgCal = Math.round(weeklyCalTotal / daysWithData);
+        const weeklyDiff = weeklyCalTotal - (tdee * daysWithData);
+        const kgProjected = parseFloat((weeklyDiff / 7700).toFixed(2));
+        const isGain = kgProjected > 0;
+
+        return (
+          <div className="card" style={{ marginBottom: 12, padding: "16px", borderColor: color + "33" }}>
+            <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 10 }}>
+              📊 {activeUserName}'s Week Projection
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
+              <span style={{ fontSize: 26, fontWeight: 700, color, fontFamily: "DM Sans, sans-serif" }}>{avgCal}</span>
+              <span className="dm" style={{ fontSize: 12, color: "#555" }}>avg cal/day across {daysWithData} logged day{daysWithData !== 1 ? "s" : ""}</span>
+            </div>
+            <div style={{ background: isGain ? "#2a1a1a" : "#1a2a1a", borderRadius: 10, padding: "10px 14px", border: `1px solid ${isGain ? "#f4433633" : "#4caf5033"}` }}>
+              <div className="dm" style={{ fontSize: 14, fontWeight: 700, color: isGain ? "#f44336" : "#4caf50", marginBottom: 3 }}>
+                {isGain ? "+" : ""}{kgProjected} kg this week
+              </div>
+              <div className="dm" style={{ fontSize: 11, color: "#888" }}>
+                Based on {daysWithData === 7 ? "full week" : `${daysWithData} of 7 days`} · TDEE {tdee} cal/day
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {DAYS.map((day, di) => {
         const dayData = week[day] || {};
         return (
@@ -1343,6 +1411,36 @@ return (
             )}
             {recipe && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18" }}>
+                {/* Removed ingredients for this slot */}
+                {(() => {
+                  const removedKey = `removed_${DAYS[selectedDay]}_${mt}`;
+                  const removed = week[DAYS[selectedDay]]?.[removedKey] || [];
+                  const allIngs = recipe.ingredients || [];
+                  return (
+                    <div style={{ marginBottom: 8 }}>
+                      <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Ingredients</div>
+                      {allIngs.map((ing, idx) => {
+                        const isRemoved = removed.includes(ing.name);
+                        return (
+                          <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #1a1814" }}>
+                            <span className="dm" style={{ fontSize: 12, color: isRemoved ? "#444" : "#888", textDecoration: isRemoved ? "line-through" : "none" }}>
+                              {ing.name} <span style={{ color: "#555" }}>{ing.qty} {ing.unit}</span>
+                            </span>
+                            <button onClick={() => {
+                              setWeek(prev => {
+                                const cur = prev[DAYS[selectedDay]]?.[removedKey] || [];
+                                const next = isRemoved ? cur.filter(n => n !== ing.name) : [...cur, ing.name];
+                                return { ...prev, [DAYS[selectedDay]]: { ...prev[DAYS[selectedDay]], [removedKey]: next } };
+                              });
+                            }} style={{ background: "none", border: "none", color: isRemoved ? "#4caf50" : "#555", fontSize: 12, cursor: "pointer", padding: "0 4px", fontFamily: "DM Sans, sans-serif" }}>
+                              {isRemoved ? "+ restore" : "× remove"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
                 {/* Sides */}
                 {(week[DAYS[selectedDay]]?.[mt]?.sides || []).length > 0 && (
                   <div style={{ marginBottom: 8 }}>
@@ -1422,7 +1520,7 @@ return (
 
 
     {/* ── Snack Cards ── */}
-      {MEMBERS.filter(m => !activeUser || m === activeUser).map(member => {
+      {MEMBERS.filter(m => m === activeUserName).map(member => {
         const snackKey = `snack_${member}`;
         const snackSlot = week[DAYS[selectedDay]]?.[snackKey] || { snacks: [] };
         const snacks = snackSlot.snacks || [];
@@ -1432,7 +1530,7 @@ return (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: snacks.length > 0 ? 12 : 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 20 }}>🍎</span>
-                <span style={{ fontWeight: 700, fontSize: 16 }}>{member}'s Snacks</span>
+                <span style={{ fontWeight: 700, fontSize: 16 }}>My Snacks</span>
               </div>
               <button className="meal-pill" onClick={() => { setSnackPickerFor({ day: DAYS[selectedDay], member }); setSnackSearch(""); }}
                 style={{ borderColor: color + "55", color }}>
@@ -1599,12 +1697,30 @@ return (
                   )}
                 </div>
                 {calDiff !== null && (
-                  <div style={{ background: isOver ? "#2a1a1a" : "#1a2a1a", borderRadius: 10, padding: "8px 12px", marginBottom: 12, border: `1px solid ${isOver ? "#f4433633" : "#4caf5033"}` }}>
+                  <div style={{ background: isOver ? "#2a1a1a" : "#1a2a1a", borderRadius: 10, padding: "8px 12px", marginBottom: 8, border: `1px solid ${isOver ? "#f4433633" : "#4caf5033"}` }}>
                     <div className="dm" style={{ fontSize: 13, fontWeight: 700, color: isOver ? "#f44336" : "#4caf50" }}>
                       {isOver ? "+" : ""}{calDiff} cal {isOver ? "over" : "under"} target
                     </div>
                     <div className="dm" style={{ fontSize: 11, color: "#888", marginTop: 3 }}>
                       {isOver ? "+" : ""}{kgToday} kg today · {isOver ? "+" : ""}{kgWeek} kg if every day this week
+                    </div>
+                  </div>
+                )}
+                {tdee && (
+                  <div style={{ background: "#1a1814", borderRadius: 10, padding: "8px 12px", marginBottom: 12, border: "1px solid #252320" }}>
+                    <div className="dm" style={{ fontSize: 12, color: "#888" }}>
+                      {(() => {
+                        const tdeeDiff = Math.round(totalCal) - tdee;
+                        const isOverTdee = tdeeDiff > 0;
+                        return (
+                          <>
+                            <span style={{ fontWeight: 700, color: isOverTdee ? "#f44336" : "#4caf50" }}>
+                              {isOverTdee ? "+" : ""}{tdeeDiff} cal {isOverTdee ? "above" : "under"} TDEE
+                            </span>
+                            <span style={{ color: "#555" }}> ({tdee} cal maintenance)</span>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
