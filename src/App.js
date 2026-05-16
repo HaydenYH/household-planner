@@ -1415,29 +1415,45 @@ return (
                 {(() => {
                   const removedKey = `removed_${DAYS[selectedDay]}_${mt}`;
                   const removed = week[DAYS[selectedDay]]?.[removedKey] || [];
+                  const showKey = `showIngEdit_${mt}`;
                   const allIngs = recipe.ingredients || [];
+                  const hasRemoved = removed.length > 0;
                   return (
                     <div style={{ marginBottom: 8 }}>
-                      <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6 }}>Ingredients</div>
-                      {allIngs.map((ing, idx) => {
-                        const isRemoved = removed.includes(ing.name);
-                        return (
-                          <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #1a1814" }}>
-                            <span className="dm" style={{ fontSize: 12, color: isRemoved ? "#444" : "#888", textDecoration: isRemoved ? "line-through" : "none" }}>
-                              {ing.name} <span style={{ color: "#555" }}>{ing.qty} {ing.unit}</span>
-                            </span>
-                            <button onClick={() => {
-                              setWeek(prev => {
-                                const cur = prev[DAYS[selectedDay]]?.[removedKey] || [];
-                                const next = isRemoved ? cur.filter(n => n !== ing.name) : [...cur, ing.name];
-                                return { ...prev, [DAYS[selectedDay]]: { ...prev[DAYS[selectedDay]], [removedKey]: next } };
-                              });
-                            }} style={{ background: "none", border: "none", color: isRemoved ? "#4caf50" : "#555", fontSize: 12, cursor: "pointer", padding: "0 4px", fontFamily: "DM Sans, sans-serif" }}>
-                              {isRemoved ? "+ restore" : "× remove"}
-                            </button>
-                          </div>
-                        );
-                      })}
+                      <button className="dm" onClick={() => {
+                        setWeek(prev => ({
+                          ...prev,
+                          [DAYS[selectedDay]]: {
+                            ...prev[DAYS[selectedDay]],
+                            [showKey]: !prev[DAYS[selectedDay]]?.[showKey]
+                          }
+                        }));
+                      }} style={{ fontSize: 11, color: hasRemoved ? "#c8a96e" : "#5c9fe0", background: "none", border: "none", cursor: "pointer", padding: "0 0 8px 0" }}>
+                        ✏️ Edit ingredients {hasRemoved ? `(${removed.length} removed)` : ""}
+                      </button>
+                      {week[DAYS[selectedDay]]?.[showKey] && (
+                        <div style={{ background: "#0c0c0a", borderRadius: 10, padding: "10px 12px", border: "1px solid #252320", marginBottom: 8 }}>
+                          {allIngs.map((ing, idx) => {
+                            const isRemoved = removed.includes(ing.name);
+                            return (
+                              <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: idx < allIngs.length - 1 ? "1px solid #1a1814" : "none" }}>
+                                <span className="dm" style={{ fontSize: 12, color: isRemoved ? "#444" : "#888", textDecoration: isRemoved ? "line-through" : "none" }}>
+                                  {ing.name} <span style={{ color: "#555" }}>{ing.qty} {ing.unit}</span>
+                                </span>
+                                <button onClick={() => {
+                                  setWeek(prev => {
+                                    const cur = prev[DAYS[selectedDay]]?.[removedKey] || [];
+                                    const next = isRemoved ? cur.filter(n => n !== ing.name) : [...cur, ing.name];
+                                    return { ...prev, [DAYS[selectedDay]]: { ...prev[DAYS[selectedDay]], [removedKey]: next } };
+                                  });
+                                }} style={{ background: "none", border: "none", color: isRemoved ? "#4caf50" : "#555", fontSize: 12, cursor: "pointer", padding: "0 4px", fontFamily: "DM Sans, sans-serif" }}>
+                                  {isRemoved ? "+ restore" : "× remove"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
