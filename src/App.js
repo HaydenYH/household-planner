@@ -3170,13 +3170,18 @@ return (
             </button>
             <button className="btn" onClick={() => {
               const name = ingredientMacroPopup.name;
-              const inStandalone = (standaloneIngredients || []).some(i => i.name.toLowerCase() === name.toLowerCase());
-              if (!inStandalone) {
-                window.alert(`"${name}" isn't a standalone ingredient — it comes from a recipe. Edit or delete that recipe to remove it.`);
+              const lower = name.toLowerCase();
+              // Only count REAL recipes — ignore the hidden auto-generated snack ones
+              const realRecipesUsing = (recipes || []).filter(r => !r.id?.toString().startsWith("snack-ing-") && r.ingredients.some(i => i.name.toLowerCase() === lower));
+              if (realRecipesUsing.length > 0) {
+                window.alert(`"${name}" is used in: ${realRecipesUsing.map(r => r.name).join(", ")}. Remove it from those recipe(s) first, or delete the recipe.`);
                 return;
               }
               if (!window.confirm(`Delete ingredient "${name}"? This cannot be undone.`)) return;
-              setStandaloneIngredients(prev => Array.isArray(prev) ? prev.filter(i => i.name.toLowerCase() !== name.toLowerCase()) : prev);
+              // Remove any standalone entry
+              setStandaloneIngredients(prev => Array.isArray(prev) ? prev.filter(i => i.name.toLowerCase() !== lower) : prev);
+              // Clean up any leftover hidden snack recipe that references it
+              setRecipes(prev => Array.isArray(prev) ? prev.filter(r => !(r.id?.toString().startsWith("snack-ing-") && r.ingredients.some(i => i.name.toLowerCase() === lower))) : prev);
               setIngredientMacroPopup(null);
             }} style={{ background: "#3a1e1e", color: "#f44336", padding: "12px 20px", width: "100%", marginTop: 8, border: "1px solid #f4433633" }}>
               Delete ingredient
