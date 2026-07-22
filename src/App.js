@@ -1100,11 +1100,6 @@ function saveEditedRecipe(draft) {
   setEditingRecipe(null);
 }
 
-function deleteRecipe(id) {
-  setRecipes(prev => Array.isArray(prev) ? prev.filter(r => r.id !== id) : prev);
-  setViewingRecipe(null);
-  setEditingRecipe(null);
-}
 
 // ── Goal actions ──────────────────────────────────────────────────────────
 function addGoal(member) {
@@ -2977,9 +2972,7 @@ return (
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => { setEditingRecipe({ ...viewingRecipe, types: viewingRecipe.types || [viewingRecipe.type], ingredients: processIngredientsForEdit(viewingRecipe.ingredients.map(i => ({ ...i, qty: i.qty || 0, unit: i.unit || "", customUnit: "" }))) }); setViewingRecipe(null); }}
               style={{ background: "#1e2a3a", border: "none", color: "#5c9fe0", borderRadius: 100, padding: "6px 14px", cursor: "pointer", fontFamily: "DM Sans, sans-serif", fontSize: 11, fontWeight: 600 }}>Edit</button>
-            <button onClick={() => { if (window.confirm(`Delete "${viewingRecipe.name}"? This cannot be undone.`)) deleteRecipe(viewingRecipe.id); }}
-              style={{ background: "#3a1e1e", border: "none", color: "#f44336", borderRadius: 100, padding: "6px 14px", cursor: "pointer", fontFamily: "DM Sans, sans-serif", fontSize: 11, fontWeight: 600 }}>Delete</button>
-            <button onClick={() => setViewingRecipe(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
+                        <button onClick={() => setViewingRecipe(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
@@ -3168,24 +3161,7 @@ return (
             }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
               Save
             </button>
-            <button className="btn" onClick={() => {
-              const name = ingredientMacroPopup.name;
-              const lower = name.toLowerCase();
-              // Only count REAL recipes — ignore the hidden auto-generated snack ones
-              const realRecipesUsing = (recipes || []).filter(r => !r.id?.toString().startsWith("snack-ing-") && r.ingredients.some(i => i.name.toLowerCase() === lower));
-              if (realRecipesUsing.length > 0) {
-                window.alert(`"${name}" is used in: ${realRecipesUsing.map(r => r.name).join(", ")}. Remove it from those recipe(s) first, or delete the recipe.`);
-                return;
-              }
-              if (!window.confirm(`Delete ingredient "${name}"? This cannot be undone.`)) return;
-              // Remove any standalone entry
-              setStandaloneIngredients(prev => Array.isArray(prev) ? prev.filter(i => i.name.toLowerCase() !== lower) : prev);
-              // Clean up any leftover hidden snack recipe that references it
-              setRecipes(prev => Array.isArray(prev) ? prev.filter(r => !(r.id?.toString().startsWith("snack-ing-") && r.ingredients.some(i => i.name.toLowerCase() === lower))) : prev);
-              setIngredientMacroPopup(null);
-            }} style={{ background: "#3a1e1e", color: "#f44336", padding: "12px 20px", width: "100%", marginTop: 8, border: "1px solid #f4433633" }}>
-              Delete ingredient
-            </button>
+            
           </>
         )}
 
