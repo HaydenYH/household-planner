@@ -788,6 +788,11 @@ const [viewingRecipeTab, setViewingRecipeTab] = useState("ingredients");
 const [showBackToTop, setShowBackToTop] = useState(false);
 const [sidesPickerFor, setSidesPickerFor] = useState(null);
 const [sidesSearch, setSidesSearch] = useState("");
+const [loosePickerFor, setLoosePickerFor] = useState(null);
+const [looseSearch, setLooseSearch] = useState("");
+const [selectedLooseIng, setSelectedLooseIng] = useState(null);
+const [looseQty, setLooseQty] = useState(100);
+const [looseUnit, setLooseUnit] = useState("g");
 const [showMissingMacrosOnly, setShowMissingMacrosOnly] = useState(false);
 const [ingredientPopupTab, setIngredientPopupTab] = useState("macros");
 const [ingredientSearch, setIngredientSearch] = useState("");
@@ -1009,6 +1014,24 @@ function buildShoppingListFromWeek(currentWeek, currentRecipes = recipes, curren
           consolidated[key].category = ingDetails?.category || guessCategory(side.name);
           consolidated[key].quantities.push({ qty: parseFloat(side.qty) || 0, unit: side.unit || "" });
         }
+      });
+    });
+
+    // Loose ingredients per meal — qty is per person, multiplied by whoever's attending
+    MEAL_TYPES.forEach(mealType => {
+      const slot = currentWeek[day]?.[mealType];
+      const loose = slot?.looseIngredients || [];
+      if (loose.length === 0) return;
+      const attendeeCount = slot.attending?.length || 0;
+      if (attendeeCount === 0) return;
+      loose.forEach(li => {
+        const store = li.store || "Woolworths";
+        const key = `${li.name.toLowerCase()}-${store}`;
+        if (!consolidated[key]) {
+          consolidated[key] = { id: key, name: li.name, store, checked: false, pantryQty: 0, pantryUnit: li.unit || "", quantities: [] };
+        }
+        consolidated[key].category = li.category || guessCategory(li.name);
+        consolidated[key].quantities.push({ qty: (parseFloat(li.qty) || 0) * attendeeCount, unit: li.unit || "" });
       });
     });
 
@@ -1287,13 +1310,19 @@ return (
           let hasMacros = false;
           MEAL_TYPES.forEach(mt => {
             const slot = week[day]?.[mt];
-            if (!slot?.mealId) return;
-            const recipe = recipes.find(r => r.id === slot.mealId);
-            if (!recipe) return;
-            const m = calcMacrosForRecipe(recipe, standaloneIngredients);
-            if (!m) return;
-            dayTotal += m.cal / (recipe.serves || 1);
-            hasMacros = true;
+            if (!slot) return;
+            const recipe = slot.mealId ? recipes.find(r => r.id === slot.mealId) : null;
+            if (recipe) {
+              const m = calcMacrosForRecipe(recipe, standaloneIngredients);
+              if (m) { dayTotal += m.cal / (recipe.serves || 1); hasMacros = true; }
+            }
+            (slot.looseIngredients || []).forEach(li => {
+              const ing = getMacros(li.name, standaloneIngredients);
+              if (ing) {
+                const grams = getGramsForUnit(li.name, li.unit, parseFloat(li.qty) || 0, standaloneIngredients);
+                if (grams !== null) { dayTotal += ing.cal * grams / 100; hasMacros = true; }
+              }
+            });
           });
           const snackKey = `snack_${activeUserName}`;
           const snackSlot = week[day]?.[snackKey];
@@ -1393,10 +1422,16 @@ return (
                   ))}
                 </div>
               </div>
-              <button className="meal-pill" onClick={() => { setPickerFor({ day: DAYS[selectedDay], mealType: mt }); setPickerLeftovers(week[DAYS[selectedDay]][mt].leftovers || false); }}
-                style={{ width: "100%", maxWidth: "100%", textAlign: "left" }}>
-                {recipe ? recipe.name : "+ Add meal"}
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="meal-pill" onClick={() => { setPickerFor({ day: DAYS[selectedDay], mealType: mt }); setPickerLeftovers(week[DAYS[selectedDay]][mt].leftovers || false); }}
+                  style={{ flex: 1, maxWidth: "none", textAlign: "left" }}>
+                  {recipe ? recipe.name : "+ Add meal"}
+                </button>
+                <button className="meal-pill" onClick={() => { setLoosePickerFor({ day: DAYS[selectedDay], mealType: mt }); setLooseSearch(""); setSelectedLooseIng(null); }}
+                  style={{ flex: 1, maxWidth: "none", textAlign: "left", color: "#5c9fe0", borderColor: "#5c9fe033" }}>
+                  + Add ingredients
+                </button>
+              </div>
             </div>
                         {recipe && mt !== "Lunch" && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18", display: "flex", alignItems: "center", gap: 8 }}>
@@ -1482,55 +1517,110 @@ return (
                   style={{ fontSize: 11, color: "#5c9fe0", background: "none", border: "none", cursor: "pointer", padding: "0 0 8px 0" }}>
                   + Add side
                 </button>
-                {(() => {
-                  const m = calcMacrosForRecipe(recipe, standaloneIngredients);
-                  const sides = week[DAYS[selectedDay]]?.[mt]?.sides || [];
-                  let extraCal = 0, extraProtein = 0, extraCarbs = 0, extraFat = 0;
-                  const attendingCount = week[DAYS[selectedDay]]?.[mt]?.attending?.length || 1;
-                  sides.forEach(side => {
-                    if (side.type === "recipe") {
-                      const sideRecipe = recipes.find(r => r.id === side.id);
-                      if (sideRecipe) {
-                        const sm = calcMacrosForRecipe(sideRecipe, standaloneIngredients);
-                        if (sm) {
-                          const perPerson = parseFloat(side.qty) || 1;
-                          extraCal += (sm.cal / (sideRecipe.serves || 1)) * perPerson / attendingCount;
-                          extraProtein += (sm.protein / (sideRecipe.serves || 1)) * perPerson / attendingCount;
-                          extraCarbs += (sm.carbs / (sideRecipe.serves || 1)) * perPerson / attendingCount;
-                          extraFat += (sm.fat / (sideRecipe.serves || 1)) * perPerson / attendingCount;
-                        }
-                      }
-                    } else {
-                      const ing = getMacros(side.name, standaloneIngredients);
-                      if (ing) {
-                        const totalGrams = getGramsForUnit(side.name, side.unit, parseFloat(side.qty) || 0);
-                        if (totalGrams !== null) {
-                          const scale = (totalGrams / attendingCount) / 100;
-                          extraCal += ing.cal * scale;
-                          extraProtein += ing.protein * scale;
-                          extraCarbs += ing.carbs * scale;
-                          extraFat += ing.fat * scale;
-                        }
-                      }
-                    }
-                  });
-                  if (!m) return null;
-                  const serves = recipe.serves || 1;
-                  const perPerson = { cal: Math.round(m.cal / serves + extraCal), carbs: Math.round(m.carbs / serves + extraCarbs), fat: Math.round(m.fat / serves + extraFat), protein: Math.round(m.protein / serves + extraProtein) };
-                  return (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 6, borderTop: "1px solid #1e1c18" }}>
-                      <span className="dm" style={{ fontSize: 16, fontWeight: 700, color: "#c8a96e" }}>{perPerson.cal}</span>
-                      <span className="dm" style={{ fontSize: 9, color: "#555" }}>cal</span>
-                      {[["P", perPerson.protein, "#5c9fe0"], ["C", perPerson.carbs, "#c8a96e"], ["F", perPerson.fat, "#a78bca"]].map(([label, val, color]) => (
-                        <div key={label} className="dm" style={{ fontSize: 11, color }}>
-                          <span style={{ fontWeight: 700 }}>{val}g</span> <span style={{ color: "#555", fontSize: 9 }}>{label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
               </div>
             )}
+            {/* Loose ingredients for this slot */}
+            {(() => {
+              const loose = week[DAYS[selectedDay]]?.[mt]?.looseIngredients || [];
+              if (loose.length === 0) return null;
+              return (
+                <div style={{ marginTop: recipe ? 0 : 10, paddingTop: 10, borderTop: "1px solid #1e1c18" }}>
+                  <div className="dm" style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#5c9fe0", marginBottom: 6 }}>🧩 Loose ingredients</div>
+                  <div style={{ background: "#0a1420", borderRadius: 10, padding: "10px 12px", border: "1px solid #1e3a52" }}>
+                    {loose.map((li, idx) => {
+                      const lm = getMacros(li.name, standaloneIngredients);
+                      const grams = lm ? getGramsForUnit(li.name, li.unit, parseFloat(li.qty) || 0, standaloneIngredients) : null;
+                      const cal = lm && grams !== null ? Math.round(lm.cal * grams / 100) : null;
+                      return (
+                        <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: idx < loose.length - 1 ? "1px solid #14283a" : "none" }}>
+                          <span className="dm" style={{ fontSize: 12, color: "#a8c8e0" }}>
+                            {li.name} <span style={{ color: "#5c7a92" }}>{li.qty} {li.unit}</span>
+                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {cal !== null ? (
+                              <span className="dm" style={{ fontSize: 11, color: "#5c9fe0", fontWeight: 700 }}>{cal} cal</span>
+                            ) : (
+                              <span className="dm" style={{ fontSize: 10, color: "#5c7a92" }}>—</span>
+                            )}
+                            <button onClick={() => {
+                              setWeek(prev => ({
+                                ...prev,
+                                [DAYS[selectedDay]]: {
+                                  ...prev[DAYS[selectedDay]],
+                                  [mt]: { ...prev[DAYS[selectedDay]][mt], looseIngredients: (prev[DAYS[selectedDay]][mt].looseIngredients || []).filter((_, i) => i !== idx) }
+                                }
+                              }));
+                            }} style={{ background: "none", border: "none", color: "#5c7a92", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>×</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+            {/* Combined macro total — recipe + sides + loose ingredients */}
+            {(() => {
+              const slot = week[DAYS[selectedDay]]?.[mt] || {};
+              const loose = slot.looseIngredients || [];
+              const sides = slot.sides || [];
+              if (!recipe && loose.length === 0) return null;
+              const attendingCount = slot.attending?.length || 1;
+              let totalCal = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
+              if (recipe) {
+                const m = calcMacrosForRecipe(recipe, standaloneIngredients);
+                if (m) {
+                  const serves = recipe.serves || 1;
+                  totalCal += m.cal / serves; totalProtein += m.protein / serves; totalCarbs += m.carbs / serves; totalFat += m.fat / serves;
+                }
+              }
+              sides.forEach(side => {
+                if (side.type === "recipe") {
+                  const sideRecipe = recipes.find(r => r.id === side.id);
+                  if (sideRecipe) {
+                    const sm = calcMacrosForRecipe(sideRecipe, standaloneIngredients);
+                    if (sm) {
+                      const perPerson = parseFloat(side.qty) || 1;
+                      totalCal += (sm.cal / (sideRecipe.serves || 1)) * perPerson / attendingCount;
+                      totalProtein += (sm.protein / (sideRecipe.serves || 1)) * perPerson / attendingCount;
+                      totalCarbs += (sm.carbs / (sideRecipe.serves || 1)) * perPerson / attendingCount;
+                      totalFat += (sm.fat / (sideRecipe.serves || 1)) * perPerson / attendingCount;
+                    }
+                  }
+                } else {
+                  const ing = getMacros(side.name, standaloneIngredients);
+                  if (ing) {
+                    const totalGrams = getGramsForUnit(side.name, side.unit, parseFloat(side.qty) || 0);
+                    if (totalGrams !== null) {
+                      const scale = (totalGrams / attendingCount) / 100;
+                      totalCal += ing.cal * scale; totalProtein += ing.protein * scale; totalCarbs += ing.carbs * scale; totalFat += ing.fat * scale;
+                    }
+                  }
+                }
+              });
+              loose.forEach(li => {
+                const lm = getMacros(li.name, standaloneIngredients);
+                if (lm) {
+                  const grams = getGramsForUnit(li.name, li.unit, parseFloat(li.qty) || 0, standaloneIngredients);
+                  if (grams !== null) {
+                    const scale = grams / 100;
+                    totalCal += lm.cal * scale; totalProtein += lm.protein * scale; totalCarbs += lm.carbs * scale; totalFat += lm.fat * scale;
+                  }
+                }
+              });
+              const perPerson = { cal: Math.round(totalCal), carbs: Math.round(totalCarbs), fat: Math.round(totalFat), protein: Math.round(totalProtein) };
+              return (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e1c18" }}>
+                  <span className="dm" style={{ fontSize: 16, fontWeight: 700, color: "#c8a96e" }}>{perPerson.cal}</span>
+                  <span className="dm" style={{ fontSize: 9, color: "#555" }}>cal</span>
+                  {[["P", perPerson.protein, "#5c9fe0"], ["C", perPerson.carbs, "#c8a96e"], ["F", perPerson.fat, "#a78bca"]].map(([label, val, color]) => (
+                    <div key={label} className="dm" style={{ fontSize: 11, color }}>
+                      <span style={{ fontWeight: 700 }}>{val}g</span> <span style={{ color: "#555", fontSize: 9 }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         );
       })}
@@ -1592,20 +1682,38 @@ return (
 
         MEAL_TYPES.forEach(mt => {
           const slot = week[DAYS[selectedDay]]?.[mt];
-          if (!slot?.mealId) return;
-          const recipe = recipes.find(r => r.id === slot.mealId);
-          if (!recipe) return;
-          const m = calcMacrosForRecipe(recipe, standaloneIngredients);
-          if (!m) return;
-          const perServe = { cal: m.cal / (recipe.serves || 1), protein: m.protein / (recipe.serves || 1), carbs: m.carbs / (recipe.serves || 1), fat: m.fat / (recipe.serves || 1), fibre: m.fibre / (recipe.serves || 1), sugar: m.sugar / (recipe.serves || 1) };
-          totalCal += perServe.cal;
-          totalProtein += perServe.protein;
-          totalCarbs += perServe.carbs;
-          totalFat += perServe.fat;
-          totalFibre += perServe.fibre;
-          totalSugar += perServe.sugar;
-          hasMacros = true;
+          if (!slot) return;
           const attendingCount = slot.attending?.length || 1;
+          const recipe = slot.mealId ? recipes.find(r => r.id === slot.mealId) : null;
+          if (recipe) {
+            const m = calcMacrosForRecipe(recipe, standaloneIngredients);
+            if (m) {
+              const perServe = { cal: m.cal / (recipe.serves || 1), protein: m.protein / (recipe.serves || 1), carbs: m.carbs / (recipe.serves || 1), fat: m.fat / (recipe.serves || 1), fibre: m.fibre / (recipe.serves || 1), sugar: m.sugar / (recipe.serves || 1) };
+              totalCal += perServe.cal;
+              totalProtein += perServe.protein;
+              totalCarbs += perServe.carbs;
+              totalFat += perServe.fat;
+              totalFibre += perServe.fibre;
+              totalSugar += perServe.sugar;
+              hasMacros = true;
+            }
+          }
+          (slot.looseIngredients || []).forEach(li => {
+            const ing = getMacros(li.name, standaloneIngredients);
+            if (ing) {
+              const grams = getGramsForUnit(li.name, li.unit, parseFloat(li.qty) || 0, standaloneIngredients);
+              if (grams !== null) {
+                const scale = grams / 100;
+                totalCal += ing.cal * scale;
+                totalProtein += ing.protein * scale;
+                totalCarbs += ing.carbs * scale;
+                totalFat += ing.fat * scale;
+                totalFibre += (ing.fibre || 0) * scale;
+                totalSugar += (ing.sugar || 0) * scale;
+                hasMacros = true;
+              }
+            }
+          });
           (slot.sides || []).forEach(side => {
             if (side.type === "recipe") {
               const sideRecipe = recipes.find(r => r.id === side.id);
@@ -3375,6 +3483,107 @@ return (
                               setSnackPickerFor(null);
                             }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "10px 16px", width: "100%" }}>
                               Add Snack
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {filtered.length === 0 && (
+                <div className="dm" style={{ textAlign: "center", padding: 24, color: "#444", fontSize: 13 }}>No ingredients found</div>
+              )}
+            </>
+          );
+        })()}
+      </div>
+    </div>
+  )}
+  {/* ── Loose Ingredients Picker Modal ── */}
+  {loosePickerFor && (
+    <div className="overlay" onClick={() => { setLoosePickerFor(null); setSelectedLooseIng(null); }}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>🧩 Add Ingredients — {loosePickerFor.mealType}</h2>
+          <button onClick={() => { setLoosePickerFor(null); setSelectedLooseIng(null); }} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
+        </div>
+        <div className="dm" style={{ fontSize: 11, color: "#555", marginBottom: 12 }}>
+          Quantities are per person — the shopping list multiplies by whoever's ticked to attend this meal. Add as many as you like, then close.
+        </div>
+        <input value={looseSearch} onChange={e => setLooseSearch(e.target.value)} placeholder="Search ingredients..." style={{ width: "100%", marginBottom: 14 }} autoFocus />
+        {(() => {
+          const allIngredients = [];
+          recipes.forEach(r => r.ingredients.forEach(i => {
+            if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+              allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+            }
+          }));
+          (standaloneIngredients || []).forEach(i => {
+            if (!allIngredients.find(x => x.name.toLowerCase() === i.name.toLowerCase())) {
+              allIngredients.push({ name: i.name, store: i.store, category: i.category || guessCategory(i.name) });
+            }
+          });
+          const filtered = looseSearch.trim().length > 0 ? allIngredients.filter(i => i.name.toLowerCase().includes(looseSearch.toLowerCase())) : allIngredients;
+          const grouped = CATEGORIES.filter(cat => filtered.some(i => (i.category || guessCategory(i.name)) === cat));
+          return (
+            <>
+              {grouped.map(cat => (
+                <div key={cat} style={{ marginBottom: 14 }}>
+                  <div className="dm" style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "#555", marginBottom: 6 }}>{CATEGORY_ICONS[cat]} {cat}</div>
+                  {filtered.filter(i => (i.category || guessCategory(i.name)) === cat).sort((a,b) => a.name.localeCompare(b.name)).map(ing => {
+                    const sc = STORE_COLORS[ing.store] || STORE_COLORS.Woolworths;
+                    const isSelected = selectedLooseIng?.name === ing.name;
+                    return (
+                      <div key={ing.name}>
+                        <div onClick={() => {
+                          const allIngs = [];
+                          recipes.forEach(r => r.ingredients.forEach(i => { if (i.name.toLowerCase() === ing.name.toLowerCase()) allIngs.push(i); }));
+                          const unit = allIngs[0]?.unit || "g";
+                          setSelectedLooseIng({ ...ing });
+                          setLooseQty(100);
+                          setLooseUnit(unit);
+                        }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, marginBottom: 4, background: isSelected ? "#0a1420" : "#0c0c0a", border: `1.5px solid ${isSelected ? "#5c9fe0" : "#252320"}`, cursor: "pointer" }}>
+                          <span className="dm" style={{ fontSize: 13, fontWeight: 500 }}>{ing.name}</span>
+                          <span className="dm" style={{ fontSize: 11, color: sc.accent, background: sc.light, padding: "2px 8px", borderRadius: 100 }}>{ing.store}</span>
+                        </div>
+                        {isSelected && (
+                          <div style={{ padding: "10px 12px", background: "#0c0c0a", borderRadius: 10, marginBottom: 8, border: "1.5px solid #5c9fe0" }}>
+                            <div className="dm" style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Quantity (per person)</div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                              <input type="number" value={looseQty} onChange={e => setLooseQty(parseFloat(e.target.value) || 0)} style={{ width: 80 }} min="0" />
+                              <select value={looseUnit} onChange={e => setLooseUnit(e.target.value)} style={{ flex: 1 }}>
+                                <option value="g">g</option>
+                                <option value="kg">kg</option>
+                                <option value="ml">ml</option>
+                                <option value="L">L</option>
+                                <option value="cups">cups</option>
+                                <option value="tbsp">tbsp</option>
+                                <option value="tsp">tsp</option>
+                                <option value="whole">whole</option>
+                                <option value="slices">slices</option>
+                                <option value="cans">cans</option>
+                                <option value="scoops">scoops</option>
+                              </select>
+                            </div>
+                            <button className="btn" onClick={() => {
+                              setWeek(prev => {
+                                const daySlot = prev[loosePickerFor.day]?.[loosePickerFor.mealType] || {};
+                                const existing = daySlot.looseIngredients || [];
+                                return {
+                                  ...prev,
+                                  [loosePickerFor.day]: {
+                                    ...prev[loosePickerFor.day],
+                                    [loosePickerFor.mealType]: {
+                                      ...daySlot,
+                                      looseIngredients: [...existing, { name: ing.name, qty: looseQty, unit: looseUnit, store: ing.store, category: ing.category || guessCategory(ing.name) }]
+                                    }
+                                  }
+                                };
+                              });
+                              setSelectedLooseIng(null);
+                            }} style={{ background: "#5c9fe0", color: "#0c0c0a", padding: "10px 16px", width: "100%" }}>
+                              Add Ingredient
                             </button>
                           </div>
                         )}
