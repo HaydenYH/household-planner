@@ -759,6 +759,7 @@ const setCategoryChecked = {
 
 const [pickerFor, setPickerFor] = useState(null);
 const [pickerLeftovers, setPickerLeftovers] = useState(false);
+const [mealPickerSearch, setMealPickerSearch] = useState("");
 const [showAddRecipe, setShowAddRecipe] = useState(false);
 const [editingRecipe, setEditingRecipe] = useState(null); // recipe object
 const [showAddShoppingItem, setShowAddShoppingItem] = useState(false);
@@ -1096,6 +1097,12 @@ function saveEditedRecipe(draft) {
   const updated = { ...draft, types: draft.types || ["Dinner"], serves: draft.serves || 4, ingredients: processedIngredients };
   setRecipes(prev => prev.map(r => r.id === draft.id ? updated : r));
   if (viewingRecipe?.id === draft.id) setViewingRecipe(updated);
+  setEditingRecipe(null);
+}
+
+function deleteRecipe(id) {
+  setRecipes(prev => Array.isArray(prev) ? prev.filter(r => r.id !== id) : prev);
+  setViewingRecipe(null);
   setEditingRecipe(null);
 }
 
@@ -2740,12 +2747,13 @@ return (
 
   {/* ── Meal Picker Modal ── */}
 {pickerFor && (
-  <div className="overlay" onClick={() => setPickerFor(null)}>
+  <div className="overlay" onClick={() => { setPickerFor(null); setMealPickerSearch(""); }}>
     <div className="sheet" onClick={e => e.stopPropagation()}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>{MEAL_ICONS[pickerFor.mealType]} {pickerFor.mealType} — {pickerFor.day}</h2>
-        <button onClick={() => setPickerFor(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
+        <button onClick={() => { setPickerFor(null); setMealPickerSearch(""); }} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer" }}>×</button>
       </div>
+      <input value={mealPickerSearch} onChange={e => setMealPickerSearch(e.target.value)} placeholder="Search meals..." style={{ width: "100%", marginBottom: 14 }} autoFocus />
       {(pickerFor.mealType === "Snack"
         ? week[pickerFor.day]?.[`snack_${pickerFor.member}`]?.mealId
         : week[pickerFor.day]?.[pickerFor.mealType]?.mealId) && (
@@ -2762,7 +2770,7 @@ return (
           Remove meal
         </button>
       )}
-      {recipes.filter(r => pickerFor.mealType === "Snack" || (r.types || [r.type]).includes(pickerFor.mealType)).map(r => {
+      {recipes.filter(r => (pickerFor.mealType === "Snack" || (r.types || [r.type]).includes(pickerFor.mealType)) && (mealPickerSearch.trim() === "" || r.name.toLowerCase().includes(mealPickerSearch.toLowerCase()))).map(r => {
         const active = week[pickerFor.day]?.[pickerFor.mealType]?.mealId === r.id;
         const currentLeftovers = active ? (pickerLeftovers) : false;
         const dayIndex = DAYS.indexOf(pickerFor.day);
@@ -2969,6 +2977,8 @@ return (
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => { setEditingRecipe({ ...viewingRecipe, types: viewingRecipe.types || [viewingRecipe.type], ingredients: processIngredientsForEdit(viewingRecipe.ingredients.map(i => ({ ...i, qty: i.qty || 0, unit: i.unit || "", customUnit: "" }))) }); setViewingRecipe(null); }}
               style={{ background: "#1e2a3a", border: "none", color: "#5c9fe0", borderRadius: 100, padding: "6px 14px", cursor: "pointer", fontFamily: "DM Sans, sans-serif", fontSize: 11, fontWeight: 600 }}>Edit</button>
+            <button onClick={() => { if (window.confirm(`Delete "${viewingRecipe.name}"? This cannot be undone.`)) deleteRecipe(viewingRecipe.id); }}
+              style={{ background: "#3a1e1e", border: "none", color: "#f44336", borderRadius: 100, padding: "6px 14px", cursor: "pointer", fontFamily: "DM Sans, sans-serif", fontSize: 11, fontWeight: 600 }}>Delete</button>
             <button onClick={() => setViewingRecipe(null)} style={{ background: "#252320", border: "none", color: "#888", borderRadius: 100, width: 28, height: 28, cursor: "pointer", fontSize: 16 }}>×</button>
           </div>
         </div>
@@ -3157,6 +3167,19 @@ return (
               setIngredientMacroPopup(null);
             }} style={{ background: "#c8a96e", color: "#0c0c0a", padding: "13px 20px", width: "100%" }}>
               Save
+            </button>
+            <button className="btn" onClick={() => {
+              const name = ingredientMacroPopup.name;
+              const inStandalone = (standaloneIngredients || []).some(i => i.name.toLowerCase() === name.toLowerCase());
+              if (!inStandalone) {
+                window.alert(`"${name}" isn't a standalone ingredient — it comes from a recipe. Edit or delete that recipe to remove it.`);
+                return;
+              }
+              if (!window.confirm(`Delete ingredient "${name}"? This cannot be undone.`)) return;
+              setStandaloneIngredients(prev => Array.isArray(prev) ? prev.filter(i => i.name.toLowerCase() !== name.toLowerCase()) : prev);
+              setIngredientMacroPopup(null);
+            }} style={{ background: "#3a1e1e", color: "#f44336", padding: "12px 20px", width: "100%", marginTop: 8, border: "1px solid #f4433633" }}>
+              Delete ingredient
             </button>
           </>
         )}
